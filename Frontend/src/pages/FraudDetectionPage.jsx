@@ -38,8 +38,14 @@ export default function FraudDetectionPage() {
             setTrend(trendData);
             setDistribution(distributionData);
         }
-        catch {
-            setError('Could not load the local demonstration records. Try again.');
+        catch (err) {
+            if (err && typeof err === 'object' && err.status === 501) {
+                setError('Live fraud monitoring is not available yet (backend returns 501).');
+            } else if (err && typeof err === 'object' && (err.status === 502 || err.status === 504)) {
+                setError('Temporary server error. Please retry.');
+            } else {
+                setError('Could not load fraud records. Try again.');
+            }
         }
         finally {
             setLoading(false);

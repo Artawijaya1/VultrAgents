@@ -88,9 +88,16 @@ export default function NegotiationPage() {
             if (analysisRequest.current === requestId)
                 setAnalysis(result);
         }
-        catch {
-            if (analysisRequest.current === requestId)
-                setAnalysisError('The local demonstration analysis could not be completed. Please try again.');
+        catch (err) {
+            if (analysisRequest.current === requestId) {
+                if (err && typeof err === 'object' && err.status === 501) {
+                    setAnalysisError('Live negotiation analysis is not available yet (backend returns 501).');
+                } else if (err && typeof err === 'object' && (err.status === 502 || err.status === 504)) {
+                    setAnalysisError('Temporary server error. Please retry.');
+                } else {
+                    setAnalysisError('The analysis could not be completed. Please try again.');
+                }
+            }
         }
         finally {
             if (analysisRequest.current === requestId)
