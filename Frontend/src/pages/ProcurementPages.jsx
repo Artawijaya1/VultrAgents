@@ -13,8 +13,9 @@ const pages = {
 const money = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
 const date = (value) => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(`${value.slice(0, 10)}T12:00:00`));
 const statusClass = (value) => value.toLowerCase().replace(/ /g, '-');
-export default function ProcurementPages() {
-    const { section = 'purchase-orders' } = useParams();
+export default function ProcurementPages({ section: routeSection }) {
+    const { section: routeParam } = useParams();
+    const section = routeSection ?? routeParam ?? 'purchase-orders';
     const page = pages[section];
     const { search: globalSearch } = useOutletContext();
     const navigate = useNavigate();
