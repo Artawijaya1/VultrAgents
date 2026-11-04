@@ -1,0 +1,3 @@
+.sidebar-foot{color:inherit;text-decoration:none;transition:border-color .16s,background .16s}
+.sidebar-foot:hover{border-color:#34718f;background:#101b2a}
+.sidebar-foot .security-indicator{background:#14253a;color:#57bce5}

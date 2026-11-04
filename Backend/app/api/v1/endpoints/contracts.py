@@ -5,13 +5,6 @@ from app.api.v1.endpoints._placeholders import EndpointContract, register_contra
 router = register_contracts(
     APIRouter(),
     (
-        EndpointContract("POST", "/auth/login", "login", "Log in", True),
-        EndpointContract("POST", "/auth/refresh", "refresh_token", "Refresh a token", True),
-        EndpointContract("POST", "/auth/logout", "logout", "Log out", True),
-        EndpointContract("GET", "/users/me", "read_current_user", "Get the current user"),
-        EndpointContract(
-            "PATCH", "/users/me", "update_current_user", "Update the current user", True
-        ),
         EndpointContract(
             "GET", "/conversations", "list_conversations", "List conversations"
         ),

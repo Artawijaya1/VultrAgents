@@ -8,7 +8,11 @@ import DashboardPreview from './components/DashboardPreview'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardOverview from './components/dashboard/DashboardOverview'
 import DashboardScaffoldPage from './components/dashboard/DashboardScaffoldPage'
+import BackendApiPage from './pages/BackendApiPage'
 import NegotiationPage from './pages/NegotiationPage'
+import LoginPage from './pages/LoginPage'
+import AuthenticatedRoute from './pages/AuthenticatedRoute'
+import DataManagementPage from './pages/DataManagementPage'
 import { features, overviewData } from './data/mockData'
 
 const reveal = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: .5 } } }
@@ -28,7 +32,7 @@ const benefits = [
 function Navbar() {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
-  return <header className="navbar"><div className="nav-inner"><Logo/><nav className={open ? 'nav-links open' : 'nav-links'} aria-label="Main navigation"><a href="#features" onClick={close}>Features</a><a href="#workflow" onClick={close}>Workflow</a><a href="#analytics" onClick={close}>Analytics</a><a href="#about" onClick={close}>About</a><div className="mobile-actions"><a href="#about" onClick={close}>Sign in</a><Link className="button button-primary" to="/dashboard" onClick={close}>Explore platform <ArrowRight size={15}/></Link></div></nav><div className="nav-actions"><a href="#about" className="sign-in">Sign In</a><Link to="/dashboard" className="button button-primary nav-cta">Explore Platform</Link></div><button className="menu-toggle" onClick={() => setOpen(!open)} aria-label={open ? 'Close menu' : 'Open menu'}>{open ? <X/> : <Menu/>}</button></div></header>
+  return <header className="navbar"><div className="nav-inner"><Logo/><nav className={open ? 'nav-links open' : 'nav-links'} aria-label="Main navigation"><a href="#features" onClick={close}>Features</a><a href="#workflow" onClick={close}>Workflow</a><a href="#analytics" onClick={close}>Analytics</a><a href="#about" onClick={close}>About</a><div className="mobile-actions"><Link to="/login" onClick={close}>Sign in</Link><Link className="button button-primary" to="/dashboard" onClick={close}>Explore platform <ArrowRight size={15}/></Link></div></nav><div className="nav-actions"><Link to="/login" className="sign-in">Sign In</Link><Link to="/dashboard" className="button button-primary nav-cta">Explore Platform</Link></div><button className="menu-toggle" onClick={() => setOpen(!open)} aria-label={open ? 'Close menu' : 'Open menu'}>{open ? <X/> : <Menu/>}</button></div></header>
 }
 
 function Hero() {
@@ -62,4 +66,4 @@ function LandingPage() { return <><Navbar/><main><Hero/><Features/><Workflow/><A
 function ModulePage({ title, description, icon: Icon }: {title:string;description:string;icon:typeof Activity}) {return <main className="dashboard-module-page"><div className="dashboard-eyebrow"><span className="live-dot"/> PROCUREMIND AI · PLATFORM MODULE</div><div className="module-heading"><span className="module-icon"><Icon size={23}/></span><div><h1>{title}</h1><p>{description}</p></div></div><div className="coming-card"><span className="coming-pulse"/><div><b>Module under development</b><small>This area is a frontend preview. No AI processing or procurement actions are active.</small></div></div><Link className="dashboard-text-link" to="/dashboard">Back to procurement overview <ArrowRight size={14}/></Link></main>}
 function FraudPage() {return <ModulePage title="Procurement Fraud Detection" description="A review surface for procurement anomalies, risk signals, and supporting evidence." icon={ShieldAlert}/>}
 
-export default function App() {return <Routes><Route path="/" element={<LandingPage/>}/><Route element={<DashboardLayout/>}><Route path="/dashboard" element={<DashboardOverview/>}/><Route path="/dashboard/:section" element={<DashboardScaffoldPage/>}/><Route path="/negotiation" element={<NegotiationPage/>}/><Route path="/fraud-detection" element={<FraudPage/>}/></Route><Route path="*" element={<LandingPage/>}/></Routes>}
+export default function App() {return <Routes><Route path="/" element={<LandingPage/>}/><Route path="/login" element={<LoginPage/>}/><Route element={<DashboardLayout/>}><Route path="/dashboard" element={<DashboardOverview/>}/><Route path="/dashboard/api" element={<BackendApiPage/>}/><Route element={<AuthenticatedRoute/>}><Route path="/dashboard/data" element={<DataManagementPage/>}/></Route><Route path="/dashboard/:section" element={<DashboardScaffoldPage/>}/><Route path="/negotiation" element={<NegotiationPage/>}/><Route path="/fraud-detection" element={<FraudPage/>}/></Route><Route path="*" element={<LandingPage/>}/></Routes>}

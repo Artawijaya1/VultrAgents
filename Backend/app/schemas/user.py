@@ -3,11 +3,6 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
-class UserCreate(BaseModel):
-    email: EmailStr
-    full_name: str | None = Field(default=None, max_length=200)
-
-
 class UserUpdate(BaseModel):
     full_name: str | None = Field(default=None, max_length=200)
     is_active: bool | None = None
@@ -18,6 +13,12 @@ class UserUpdate(BaseModel):
         if value is None:
             raise ValueError("is_active cannot be null")
         return value
+
+
+class UserProfileUpdate(BaseModel):
+    full_name: str | None = Field(default=None, max_length=200)
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class UserRead(BaseModel):

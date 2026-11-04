@@ -1,29 +1,23 @@
+from uuid import UUID
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.user import User
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import UserUpdate
 
 
 def get_user(db: Session, user_id: int) -> User | None:
     return db.get(User, user_id)
 
 
-def get_user_by_email(db: Session, email: str) -> User | None:
-    return db.scalar(select(User).where(User.email == email))
+def get_user_by_auth_id(db: Session, auth_user_id: UUID) -> User | None:
+    return db.scalar(select(User).where(User.auth_user_id == auth_user_id))
 
 
 def list_users(db: Session, skip: int = 0, limit: int = 100) -> list[User]:
     statement = select(User).order_by(User.id).offset(skip).limit(limit)
     return list(db.scalars(statement).all())
-
-
-def create_user(db: Session, user: UserCreate) -> User:
-    db_user = User(email=str(user.email), full_name=user.full_name)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
 
 
 def update_user(db: Session, db_user: User, changes: UserUpdate) -> User:
@@ -32,9 +26,3 @@ def update_user(db: Session, db_user: User, changes: UserUpdate) -> User:
     db.commit()
     db.refresh(db_user)
     return db_user
-
-
-def delete_user(db: Session, db_user: User) -> None:
-    db.delete(db_user)
-    db.commit()
-
