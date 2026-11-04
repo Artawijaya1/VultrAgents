@@ -220,6 +220,15 @@ export const createFraudScan = (body) => request('/fraud/scans', { method: 'POST
 export const explainFraudAlert = (id, body) => request(`/fraud/alerts/${id}/explain`, { method: 'POST', body: JSON.stringify(body) }, true);
 export const holdFraudulentPayment = (id, body) => request(`/fraud/alerts/${id}/hold-payment`, { method: 'POST', body: JSON.stringify(body) }, true);
 export const getFraudRules = () => request('/fraud/rules', {}, true);
+// --- Procurement helpers (all 501 placeholder) ---
+export const getPurchaseOrders = () => request('/purchase-orders', {}, true);
+export const getPurchaseOrder = (id) => request(`/purchase-orders/${id}`, {}, true);
+export const getVendors = () => request('/vendors', {}, true);
+export const getVendor = (id) => request(`/vendors/${id}`, {}, true);
+export const getContracts = () => request('/contracts', {}, true);
+export const getContract = (id) => request(`/contracts/${id}`, {}, true);
+export const getInvoices = () => request('/invoices', {}, true);
+export const getInvoice = (id) => request(`/invoices/${id}`, {}, true);
 export const apiRoutes = {
     health: `${apiOrigin}/health`,
     readiness: `${apiOrigin}/ready`,

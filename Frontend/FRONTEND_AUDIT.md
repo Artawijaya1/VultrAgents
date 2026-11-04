@@ -277,3 +277,19 @@ Generated: 2026-11-04
 | `Cell`, `Pie`, `PieChart` import usage in App.jsx Analytics() | Long line truncated in read_file; likely used inside the truncated Analytics function but could not confirm line-by-line |
 | Actual visual rendering of all pages at 360px breakpoint | Would require browser; CSS-only review done |
 | Profile popover sign-out behavior when session is null | Code review suggests it shows "Not signed in" but popover rendering was truncated |
+
+---
+
+## Resolved Issues (Post-Audit Fixes — Phases A, B, C)
+
+| Audit Item | How Fixed | File(s) Affected | Phase |
+|---|---|---|---|
+| **F4 / P1-3: Legacy session key** | Renamed `SESSION_STORAGE_KEY` to `'procuremind-auth-session'` with an automatic one-time migration from `'life-purpose-auth-session'` so existing signed-in tabs are not logged out. | `src/services/api.js:3-11` | Phase A |
+| **F4 / P2-2: README TypeScript claim** | Corrected line 3 of `README.md` from "TypeScript" to "Plain JavaScript (JSX) — no TypeScript configuration". | `Frontend/README.md:3` | Phase A |
+| **F2 / P1-4: Empty WhatsApp link** | Replaced hardcoded `https://wa.me/` with env-driven `VITE_WHATSAPP_URL`. If the variable is empty or omitted, the WhatsApp button is not rendered at all. Documented in `.env.example`. | `src/App.jsx:55`, `Frontend/.env.example:6` | Phase A |
+| **F2 / P1-6: Unhandled ⌘K hint** | Removed the `<kbd>⌘ K</kbd>` visual hint from the dashboard topbar search input. | `src/layouts/DashboardLayout.jsx:35` | Phase A |
+| **P0-2: NegotiationPage mock-only** | Created live adapter alongside existing mock adapter in `src/services/negotiationService.js`, controlled by `VITE_NEGOTIATION_MODE=mock\|live` (default: `mock`). Added additive API helpers in `src/services/api.js`. Handled HTTP 501 ("Live negotiation analysis is not available yet") and 502/504 retry errors gracefully. | `src/services/negotiationService.js`, `src/services/api.js:203-214`, `src/pages/NegotiationPage.jsx:90-101`, `Frontend/.env.example:5` | Phase B1 |
+| **P0-3: FraudDetectionPage mock-only** | Created live adapter alongside existing mock adapter in `src/services/fraudDetectionService.js`, controlled by `VITE_FRAUD_MODE=mock\|live` (default: `mock`). Added additive API helpers in `src/services/api.js`. Handled HTTP 501 and 502/504 errors in `loadData`. | `src/services/fraudDetectionService.js`, `src/services/api.js:215-224`, `src/pages/FraudDetectionPage.jsx:40-49`, `Frontend/.env.example:6` | Phase B2 |
+| **P0-1: Procurement pages mock-only** | Created `src/services/procurementService.js` with mock adapter (reading from zustand store) and live adapter (fetching orders, vendors, invoices, contracts), controlled by `VITE_PROCUREMENT_MODE=mock\|live` (default: `mock`). Added additive API helpers in `src/services/api.js`. Added live error detection hook and notice banner in `ProcurementPages.jsx`. | `src/services/procurementService.js`, `src/services/api.js:225-233`, `src/pages/ProcurementPages.jsx:35-51,130`, `Frontend/.env.example:7` | Phase B3 |
+| **P1-1 & Backend Gaps Documentation** | Completed `Frontend/BACKEND_REQUESTS.md` with full endpoint specifications, assumed contracts, and known gaps (session ownership, message ID, approval ID, conversation binding), sorted by demo priority (P0, P1, P2). | `Frontend/BACKEND_REQUESTS.md` | Phase C |
+
