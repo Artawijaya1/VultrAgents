@@ -1,6 +1,14 @@
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/+$/, '');
 const apiOrigin = apiBaseUrl.replace(/\/api\/v1$/, '');
-const SESSION_STORAGE_KEY = 'life-purpose-auth-session';
+const SESSION_STORAGE_KEY = 'procuremind-auth-session';
+// One-time migration from the old project name key
+const _LEGACY_KEY = 'life-purpose-auth-session';
+try {
+    if (!sessionStorage.getItem(SESSION_STORAGE_KEY) && sessionStorage.getItem(_LEGACY_KEY)) {
+        sessionStorage.setItem(SESSION_STORAGE_KEY, sessionStorage.getItem(_LEGACY_KEY));
+        sessionStorage.removeItem(_LEGACY_KEY);
+    }
+} catch { /* storage unavailable — session will be null */ }
 export class ApiError extends Error {
     constructor(message, status) {
         super(message);
@@ -192,6 +200,26 @@ export const sendMessageFeedback = (messageId, rating) => request(`/messages/${m
 export const getApprovals = () => request('/approvals', {}, true);
 export const approveApproval = (approvalId) => request(`/approvals/${approvalId}/approve`, { method: 'POST', body: JSON.stringify({}) }, true);
 export const rejectApproval = (approvalId) => request(`/approvals/${approvalId}/reject`, { method: 'POST', body: JSON.stringify({}) }, true);
+// --- Negotiation helpers (all 501 placeholder) ---
+export const getNegotiations = () => request('/negotiations', {}, true);
+export const createNegotiation = (body) => request('/negotiations', { method: 'POST', body: JSON.stringify(body) }, true);
+export const getNegotiation = (id) => request(`/negotiations/${id}`, {}, true);
+export const getNegotiationContext = (id) => request(`/negotiations/${id}/context`, {}, true);
+export const getNegotiationOptions = (id) => request(`/negotiations/${id}/options`, {}, true);
+export const createNegotiationOptions = (id, body) => request(`/negotiations/${id}/options`, { method: 'POST', body: JSON.stringify(body) }, true);
+export const getNegotiationDrafts = (id) => request(`/negotiations/${id}/drafts`, {}, true);
+export const createNegotiationDraft = (id, body) => request(`/negotiations/${id}/drafts`, { method: 'POST', body: JSON.stringify(body) }, true);
+export const getPurchaseHistory = () => request('/purchase-history', {}, true);
+export const getPriceHistory = () => request('/price-history', {}, true);
+// --- Fraud helpers (all 501 placeholder) ---
+export const getFraudAlerts = () => request('/fraud/alerts', {}, true);
+export const getFraudAlert = (id) => request(`/fraud/alerts/${id}`, {}, true);
+export const updateFraudAlert = (id, body) => request(`/fraud/alerts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, true);
+export const getFraudDashboard = () => request('/fraud/dashboard', {}, true);
+export const createFraudScan = (body) => request('/fraud/scans', { method: 'POST', body: JSON.stringify(body) }, true);
+export const explainFraudAlert = (id, body) => request(`/fraud/alerts/${id}/explain`, { method: 'POST', body: JSON.stringify(body) }, true);
+export const holdFraudulentPayment = (id, body) => request(`/fraud/alerts/${id}/hold-payment`, { method: 'POST', body: JSON.stringify(body) }, true);
+export const getFraudRules = () => request('/fraud/rules', {}, true);
 export const apiRoutes = {
     health: `${apiOrigin}/health`,
     readiness: `${apiOrigin}/ready`,

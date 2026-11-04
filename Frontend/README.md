@@ -1,6 +1,6 @@
 # PROCUREMIND AI Frontend
 
-AI-powered procurement intelligence interface built with React, TypeScript, Vite, React Router, Recharts, Framer Motion, and Lucide.
+AI-powered procurement intelligence interface built with React, Vite, React Router, Recharts, Framer Motion, and Lucide. Plain JavaScript (JSX) — no TypeScript configuration.
 
 ## Getting started
 
