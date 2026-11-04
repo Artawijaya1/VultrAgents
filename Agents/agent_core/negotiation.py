@@ -10,7 +10,20 @@ def recommend_negotiation(provider: ProcurementProvider, po_id: str) -> dict:
     price = Decimal(str(po['offered_unit_price']))
     ceiling = Decimal(str(po['budget_ceiling_unit']))
     previous = Decimal(str(po['previous_unit_price']))
-    quantity = int(po['quantity'])
+    # Backend serializes PostgreSQL NUMERIC(18,4) as a decimal string,
+    # e.g. "10.0000"; int("10.0000") raises ValueError.
+    # Current business rules require whole units. Never silently truncate fractions.
+    try:
+        quantity_value = Decimal(str(po['quantity']))
+        if (not quantity_value.is_finite() or quantity_value <= 0
+                or quantity_value != quantity_value.to_integral_value()
+                or quantity_value > Decimal('99999999999999')):
+            return {'status': 'invalid_data', 'po_id': po_id,
+                    'error': 'Quantity harus bilangan bulat positif yang valid'}
+        quantity = int(quantity_value)
+    except (ValueError, TypeError, ArithmeticError):
+        return {'status': 'invalid_data', 'po_id': po_id,
+                'error': 'Quantity harus bilangan bulat positif yang valid'}
     if min(price, ceiling, previous) <= 0 or quantity <= 0:
         return {'status': 'invalid_data', 'po_id': po_id, 'error': 'Harga/jumlah tidak valid'}
     opening = (min(ceiling * Decimal('0.97'), previous * Decimal('0.95')) / 1000).to_integral_value(rounding=ROUND_DOWN) * 1000
