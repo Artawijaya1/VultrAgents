@@ -68,9 +68,16 @@ my-backend/
 
 
 
-APi Key 
+APi Key
 
-Yang masih kurang di /internal (agents)
+Kontrak internal Agent berikut sudah diimplementasikan pada `/api/v1/internal`
+dan dilindungi `X-API-Key`. Perubahan workflow yang berisiko membuat approval
+pending; endpoint ini tidak menjalankan penolakan PO atau mengirim komunikasi.
+Endpoint baca procurement tambahan yang dipakai Agent HTTP provider:
+`GET /procurement/pos/{po_id}`, `GET /procurement/suppliers/{supplier_id}`,
+dan `GET /procurement/suppliers/{supplier_id}/invoices`.
+
+Kontrak internal Agent:
 Kelompok	Endpoint tambahan	Kenapa dibutuhkan
 Data baca	GET /purchase-orders/{id}/versions	Agent perlu membandingkan versi PO sebelum dan sesudah perubahan
 	GET /vendors/{id}/performance	Konteks negosiasi dan analisis dampak
@@ -107,4 +114,3 @@ Fraud	POST /fraud/scans, GET /fraud/alerts, GET /fraud/alerts/{id}, PATCH /fraud
 Invoice & rekening	GET/POST /invoices, GET /vendors/{id}/bank-accounts, POST /vendors/{id}/bank-accounts/change-requests, POST .../{id}/verify
 Pendukung	GET /audit-logs, GET/POST /notifications, GET/PATCH /settings/policies, GET /usage, GET /health, GET /ready
 Webhook	POST /webhooks/inbound-email (dari penyedia email, bukan frontend)
-

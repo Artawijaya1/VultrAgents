@@ -1,7 +1,7 @@
 """Read-only adapter contract with teammate's backend. Never passes arbitrary SQL."""
 from __future__ import annotations
 import os
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -29,7 +29,7 @@ class HTTPProcurementProvider:
     def _get(self, path: str):
         try:
             res = self.client.get(self.base_url + path,
-                                  headers={'Authorization': f'Bearer {self.token}', 'Accept': 'application/json'})
+                                  headers={'X-API-Key': self.token, 'Accept': 'application/json'})
             if res.status_code == 404:
                 return None
             res.raise_for_status()
@@ -38,19 +38,23 @@ class HTTPProcurementProvider:
             raise BackendProviderError('Backend procurement tidak tersedia atau respons tidak valid') from exc
 
     def get_po(self, po_id: str) -> dict | None:
-        data = self._get('/api/v1/procurement/pos/' + po_id)
+        data = self._get('/api/v1/internal/procurement/pos/' + quote(po_id, safe=''))
         if data is not None and not isinstance(data, dict):
             raise BackendProviderError('PO response harus JSON object')
         return data
 
     def get_supplier(self, supplier_id: str) -> dict | None:
-        data = self._get('/api/v1/procurement/suppliers/' + supplier_id)
+        data = self._get('/api/v1/internal/procurement/suppliers/' + quote(supplier_id, safe=''))
         if data is not None and not isinstance(data, dict):
             raise BackendProviderError('Supplier response harus JSON object')
         return data
 
     def get_invoices(self, supplier_id: str) -> list[dict]:
-        data = self._get('/api/v1/procurement/suppliers/' + supplier_id + '/invoices')
+        data = self._get(
+            '/api/v1/internal/procurement/suppliers/'
+            + quote(supplier_id, safe='')
+            + '/invoices'
+        )
         if data is None:
             return []
         if isinstance(data, dict) and isinstance(data.get('items'), list):

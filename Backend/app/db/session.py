@@ -8,6 +8,7 @@ from app.core.config import get_settings
 engine = create_engine(
     get_settings().sqlalchemy_database_url,
     pool_pre_ping=True,
+    connect_args={"prepare_threshold": None},
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 

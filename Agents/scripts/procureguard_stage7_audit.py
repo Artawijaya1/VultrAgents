@@ -247,7 +247,8 @@ def stage_7c_static():
     required = {
         'agent_core/graph_api.py': ('/api/v1/agents/run', '/api/v1/agents/chat', '/health'),
         'agent_core/provider_http.py': ('PROCUREMENT_BACKEND_URL', 'PROCUREMENT_SERVICE_TOKEN',
-                                        '/api/v1/procurement/pos/', '/api/v1/procurement/suppliers/'),
+                                        '/api/v1/internal/procurement/pos/',
+                                        '/api/v1/internal/procurement/suppliers/'),
     }
     for path, terms in required.items():
         absent = [t for t in terms if not source_contains(path, t)]
@@ -259,7 +260,7 @@ def stage_7c_static():
     if contract_file.is_file():
         contract_text = contract_file.read_text(encoding='utf-8', errors='replace')
         required_terms = ('/api/v1/agents/chat', 'reference_type',
-                          '/api/v1/procurement/pos/', 'PROCUREMENT_SERVICE_TOKEN')
+                          '/api/v1/internal/procurement/pos/', 'PROCUREMENT_SERVICE_TOKEN')
         missing = [x for x in required_terms if x not in contract_text]
         check('7C', 'Dokumentasi kontrak untuk tim backend', 'PASS' if not missing else 'WARN',
               'Meliputi chat, PO-fraud, serta backend procurement' if not missing
@@ -280,12 +281,17 @@ def stage_7c_static():
         from agent_core.provider_http import HTTPProcurementProvider
         observed = []
         def handler(req):
-            observed.append((req.url.path, req.headers.get('Authorization', '')))
-            if req.url.path == '/api/v1/procurement/pos/PO-001':
+            if (
+                req.headers.get('X-API-Key') != 'test-adapter-token'
+                or req.headers.get('Authorization') is not None
+            ):
+                return httpx.Response(401)
+            observed.append((req.url.path, 'Bearer test-adapter-token'))
+            if req.url.path == '/api/v1/internal/procurement/pos/PO-001':
                 return httpx.Response(200, json={'po_id': 'PO-001', 'supplier_id': 'SUP-001'})
-            if req.url.path == '/api/v1/procurement/suppliers/SUP-001':
+            if req.url.path == '/api/v1/internal/procurement/suppliers/SUP-001':
                 return httpx.Response(200, json={'supplier_id': 'SUP-001'})
-            if req.url.path == '/api/v1/procurement/suppliers/SUP-001/invoices':
+            if req.url.path == '/api/v1/internal/procurement/suppliers/SUP-001/invoices':
                 return httpx.Response(200, json={'items': [{'invoice_id': 'INV-001'}]})
             return httpx.Response(404)
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:

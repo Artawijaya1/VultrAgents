@@ -6,8 +6,12 @@ from agent_core.provider_http import HTTPProcurementProvider, BackendProviderErr
 class HTTPProviderTest(unittest.TestCase):
     def setUp(self):
         def handler(request):
-            if request.headers.get('Authorization') != 'Bearer test-token':
+            if request.headers.get('X-API-Key') != 'test-token':
                 return httpx.Response(401)
+            if request.headers.get('Authorization') or not request.url.path.startswith(
+                '/api/v1/internal/procurement/'
+            ):
+                return httpx.Response(404)
             if request.url.path.endswith('/invoices'):
                 return httpx.Response(200, json={'items': [{'record_id': 'R1', 'supplier_id': 'S1'}]})
             if request.url.path.endswith('/pos/PO-404'):

@@ -27,8 +27,8 @@ def test_internal_routes_accept_configured_api_key(client):
         headers={"X-API-Key": "test-internal-api-key"},
     )
 
-    assert response.status_code == 501
-    assert "not implemented yet" in response.json()["detail"]
+    assert response.status_code == 200
+    assert response.json() == {"items": []}
 
 
 def test_non_internal_routes_do_not_require_agent_api_key(client):

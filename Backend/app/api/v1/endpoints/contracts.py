@@ -39,17 +39,6 @@ router = register_contracts(
         EndpointContract(
             "GET", "/runs/{id}/tool-calls", "list_run_tool_calls", "List run tool calls"
         ),
-        EndpointContract("GET", "/approvals", "list_approvals", "List approvals"),
-        EndpointContract("GET", "/approvals/{id}", "read_approval", "Get an approval"),
-        EndpointContract(
-            "POST", "/approvals", "create_approval", "Submit an approval request", True
-        ),
-        EndpointContract(
-            "POST", "/approvals/{id}/approve", "approve_approval", "Approve a request", True
-        ),
-        EndpointContract(
-            "POST", "/approvals/{id}/reject", "reject_approval", "Reject an approval", True
-        ),
         EndpointContract(
             "GET", "/purchase-orders", "list_purchase_orders", "List purchase orders"
         ),

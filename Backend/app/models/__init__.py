@@ -1,6 +1,47 @@
 from app.models.base import Base
 from app.models.item import Item
+from app.models.procurement import (
+    AgentRun,
+    AgentSession,
+    ApprovalRequest,
+    AuditLog,
+    ChangeRequest,
+    Communication,
+    FraudAlert,
+    FraudRule,
+    FraudScan,
+    Invoice,
+    Negotiation,
+    NegotiationDraft,
+    ProcurementPolicy,
+    PurchaseOrder,
+    PurchaseOrderFollowUp,
+    PurchaseOrderVersion,
+    Supplier,
+    VendorPerformance,
+)
 from app.models.user import User
 
-__all__ = ["Base", "Item", "User"]
-
+__all__ = [
+    "AgentRun",
+    "AgentSession",
+    "ApprovalRequest",
+    "AuditLog",
+    "Base",
+    "ChangeRequest",
+    "Communication",
+    "FraudAlert",
+    "FraudRule",
+    "FraudScan",
+    "Invoice",
+    "Item",
+    "Negotiation",
+    "NegotiationDraft",
+    "ProcurementPolicy",
+    "PurchaseOrder",
+    "PurchaseOrderFollowUp",
+    "PurchaseOrderVersion",
+    "Supplier",
+    "User",
+    "VendorPerformance",
+]

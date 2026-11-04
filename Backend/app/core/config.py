@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     supabase_url: str | None = None
     supabase_anon_key: SecretStr | None = None
     internal_api_key: SecretStr | None = None
+    agent_api_url: str | None = None
+    agent_api_key: SecretStr | None = None
     cors_origins: list[str] = ["http://localhost:5173"]
 
     model_config = SettingsConfigDict(

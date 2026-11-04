@@ -14,7 +14,7 @@ Content-Type: application/json
 Input negotiation:
 
 ```json
-{"task":"negotiation","reference_id":"PO-001","instruction":"Susun opsi negosiasi untuk pemasok"}
+{"task":"negotiation","reference_id":"PO-001","reference_type":"po","instruction":"Susun opsi negosiasi untuk pemasok"}
 ```
 
 Input fraud:
@@ -46,13 +46,14 @@ Swagger: `GET /docs` on agent service. Never expose dev docs publicly without ga
 ## B. Backend procurement API (milik teman database/backend)
 
 Used only when `AGENT_DATA_MODE=http` and `PROCUREMENT_BACKEND_URL` is configured.
-Backend must require `Authorization: Bearer <PROCUREMENT_SERVICE_TOKEN>`.
+Backend must require `X-API-Key: <PROCUREMENT_SERVICE_TOKEN>`, where the value
+matches Backend `INTERNAL_API_KEY`. The key stays server-side.
 
 | Method | Endpoint | Returns |
 |---|---|---|
-| GET | `/api/v1/procurement/pos/{po_id}` | JSON PO or HTTP 404 |
-| GET | `/api/v1/procurement/suppliers/{supplier_id}` | JSON supplier or HTTP 404 |
-| GET | `/api/v1/procurement/suppliers/{supplier_id}/invoices` | JSON array of invoices or `{ "items": [...] }` |
+| GET | `/api/v1/internal/procurement/pos/{po_id}` | JSON PO or HTTP 404 |
+| GET | `/api/v1/internal/procurement/suppliers/{supplier_id}` | JSON supplier or HTTP 404 |
+| GET | `/api/v1/internal/procurement/suppliers/{supplier_id}/invoices` | JSON array of invoices or `{ "items": [...] }` |
 
 Required PO fields (current calculation): `po_id`, `supplier_id`, `product_id`, `quantity`, `offered_unit_price`, `budget_ceiling_unit`, `previous_unit_price`, `currency`, `required_delivery_date`.
 
@@ -71,7 +72,9 @@ Amounts are in minor-less integer IDR units in current demo. Update currency rou
 - Protect bank-account identifiers and personal data; return only metadata needed by the rules.
 - Do not expose agent to the internet on 0.0.0.0 until authentication, HTTPS, request limits, logging, and access controls are hardened.
 - Fraud evidence must be reviewed by a human; duplicate invoice numbers may arise from legitimate data errors.
-- Mock data is synthetic. There is no database integration until backend contract implemented.
+- Mock data is synthetic. Backend now provides these read-only endpoints using the procurement schema; set `AGENT_DATA_MODE=http` to use them.
+- Frontend requests must go through Backend `/api/v1/agents/run` or `/api/v1/agents/chat`. Backend checks signed-in user and PO ownership before forwarding. Configure Backend `AGENT_API_URL` and `AGENT_API_KEY`; the key must match Agent `AGENT_API_KEY`.
+- Mutating internal workflow requests create pending approval records. An admin decision records approval status only; it does not send communications or execute a procurement change.
 
 ## D. Integration options
 
@@ -94,8 +97,7 @@ Untuk pemeriksaan fraud khusus PO, **wajib** gunakan `reference_type: "po"`:
 }
 ```
 
-Untuk fraud supplier, gunakan `reference_type: "supplier"` jika didukung
-oleh kontrak runtime; pastikan melalui `/openapi.json` sebelum mengirim.
+Untuk fraud supplier, gunakan `reference_type: "supplier"`.
 Periksa `result`, `precheck`, `tool_trace`, `requires_approval`, serta `status`.
 `review_required` adalah indikator perlu review, **bukan** vonis kecurangan.
 

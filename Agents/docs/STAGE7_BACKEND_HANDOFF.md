@@ -1,7 +1,8 @@
 # ProcureGuard AI — Serah-terima kontrak Backend ↔ Agents (Stage 7)
 
-Status: implementasi Agent menggunakan MOCK data dan layanan Agent FastAPI mandiri.
-Backend asli, frontend, persistent session dan otorisasi per pengguna BELUM diuji.
+Status: Agent menyediakan FastAPI mandiri; Backend memiliki procurement schema,
+internal read API, server-side Agent proxy, dan penyimpanan session/approval.
+Koneksi Agent dan database nyata tetap harus dikonfigurasi untuk deployment.
 
 ## Arah arsitektur
 
@@ -72,13 +73,15 @@ kelanjutan sesi, bukan jaminan memori permanen.
 ## Data Backend yang diperlukan Agent dalam mode http
 
 `AGENT_DATA_MODE=http`, `PROCUREMENT_BACKEND_URL` dan
-`PROCUREMENT_SERVICE_TOKEN` hanya server-side. Gunakan HTTPS di luar localhost.
+`PROCUREMENT_SERVICE_TOKEN` hanya server-side. Nilainya harus sama dengan
+Backend `INTERNAL_API_KEY` dan dikirim sebagai `X-API-Key`. Gunakan HTTPS di
+luar localhost.
 
 | Metode | Path backend | Bentuk minimum |
 |---|---|---|
-| GET | `/api/v1/procurement/pos/{po_id}` | object PO |
-| GET | `/api/v1/procurement/suppliers/{supplier_id}` | object supplier |
-| GET | `/api/v1/procurement/suppliers/{supplier_id}/invoices` | array atau `{"items": [...]}` |
+| GET | `/api/v1/internal/procurement/pos/{po_id}` | object PO |
+| GET | `/api/v1/internal/procurement/suppliers/{supplier_id}` | object supplier |
+| GET | `/api/v1/internal/procurement/suppliers/{supplier_id}/invoices` | array atau `{"items": [...]}` |
 
 PO: `po_id`, `supplier_id`, `product_id`, `quantity`, `offered_unit_price`,
 `budget_ceiling_unit`, `previous_unit_price`, `currency`, `required_delivery_date`.
@@ -98,3 +101,8 @@ Lakukan validasi nilai uang/tanggal; contoh sekarang hanya IDR dan mock data.
 
 Session Agent saat ini `InMemorySaver` untuk demo satu worker; restart menghapus
 memori, bukan penyimpanan permanen. Jangan klaim production-ready.
+
+Backend forwards authenticated calls to Agent using server-only
+`AGENT_API_URL` and `AGENT_API_KEY`. Agent responses marked
+`requires_approval` are persisted as pending records. Approval endpoints only
+record a human decision and do not execute the proposed business action.

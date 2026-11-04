@@ -41,13 +41,19 @@ dbname=postgres
 
 The backend builds a `postgresql+psycopg` URL and safely encodes the password. A valid `DATABASE_URL` takes precedence; if it is malformed, the separate parameters are used. Use the exact connection details shown in **Project Settings → Database → Connect**, especially the pooler username when using the transaction pooler. Never commit `.env`.
 
+For Supabase transaction-pooler compatibility, the application and Alembic disable psycopg's automatic prepared-statement threshold.
+
 Generate a private API key for agent-only endpoints and store it as `INTERNAL_API_KEY` in `.env` (do not commit or expose it in frontend code):
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Send it in the `X-API-Key` header when calling `/api/v1/internal/*`. These endpoints return `503` until a key is configured, `401` for a missing/invalid key, and `501` when the key is valid but the endpoint's business logic has not yet been implemented. All paths and methods listed in `MD.md` are registered and visible in `/docs`. Procurement workflow placeholders return `501`; do not connect them to real business data until their authorization and business logic are implemented.
+Send it in the `X-API-Key` header when calling `/api/v1/internal/*`. These endpoints return `503` until a key is configured and `401` for a missing/invalid key. The internal Agent data and workflow endpoints are backed by the procurement schema; other API contracts listed in `MD.md` may still be placeholders and return `501`.
+
+The Agent read provider uses the same server-only key in `PROCUREMENT_SERVICE_TOKEN` and calls the implemented read-only paths under `/api/v1/internal/procurement/*`. The Backend-to-Agent proxy uses `AGENT_API_URL` and `AGENT_API_KEY`; configure the latter to match the Agent service's `AGENT_API_KEY`. Keep both keys out of frontend configuration.
+
+Authenticated Agent requests use `POST /api/v1/agents/run` and `/api/v1/agents/chat`. They are scoped to purchase orders owned by the signed-in user; chat session IDs are bound to that user, PO, and task. Agent responses marked `requires_approval` create pending records available from `/api/v1/approvals`. Approval decisions require an administrator and only record the decision; they do not send messages or mutate procurement records.
 
 Apply the schema migrations and start the development server:
 
@@ -96,6 +102,10 @@ docker compose up --build
 
 - `GET /health`, `GET /ready`
 - `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET/PATCH /api/v1/auth/me`
+- Authenticated `POST /api/v1/agents/run`, `POST /api/v1/agents/chat`; approvals: `GET/POST /api/v1/approvals`, `GET /api/v1/approvals/{id}`, admin-only `POST /api/v1/approvals/{id}/approve` and `/reject`
+- API-key-only Agent reads: `/api/v1/internal/procurement/pos/{po_id}`, `/api/v1/internal/procurement/suppliers/{supplier_id}`, and `/api/v1/internal/procurement/suppliers/{supplier_id}/invoices`
+- Authenticated `POST /api/v1/agents/run`, `POST /api/v1/agents/chat`; approvals: `GET/POST /api/v1/approvals`, `GET /api/v1/approvals/{id}`, admin-only `POST /api/v1/approvals/{id}/approve` and `/reject`
+- API-key-only read access for Agent at `/api/v1/internal/procurement/pos/{po_id}`, `/suppliers/{supplier_id}`, and `/suppliers/{supplier_id}/invoices`
 - `GET/PATCH /api/v1/users/me`; admin-only `GET /api/v1/users`, `GET /api/v1/users/{id}`, and `PATCH /api/v1/users/{id}`
 - Authenticated, owner-scoped `POST/GET /api/v1/items/`, `GET/PATCH/DELETE /api/v1/items/{item_id}`
 
