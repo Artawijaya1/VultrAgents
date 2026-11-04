@@ -170,7 +170,7 @@ async def chat_agent(
     payload = request.model_dump()
     payload["session_id"] = session_id
     try:
-        response = await call_agent("chat", payload, timeout=52.0)
+        response = await call_agent("chat", payload, timeout=160.0)
     except AgentServiceTimeout as exc:
         raise HTTPException(status_code=504, detail="Agent conversation timed out.") from exc
     except AgentServiceNotConfigured as exc:

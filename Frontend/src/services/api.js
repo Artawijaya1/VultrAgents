@@ -42,15 +42,15 @@ function saveAuthSession(value) {
         sessionStorage.removeItem(SESSION_STORAGE_KEY);
     }
 }
-async function request(path, init = {}, authenticated = false) {
-    const firstResponse = await sendRequest(path, init, authenticated ? session?.access_token : undefined);
+async function request(path, init = {}, authenticated = false, timeoutMs = 10000) {
+    const firstResponse = await sendRequest(path, init, authenticated ? session?.access_token : undefined, timeoutMs);
     if (firstResponse.status === 401 && authenticated && session?.refresh_token) {
         const refreshed = await refreshAuthSession();
-        return parseResponse(await sendRequest(path, init, refreshed.access_token));
+        return parseResponse(await sendRequest(path, init, refreshed.access_token, timeoutMs));
     }
     return parseResponse(firstResponse);
 }
-async function sendRequest(path, init, accessToken) {
+async function sendRequest(path, init, accessToken, timeoutMs = 10000) {
     const headers = new Headers(init.headers);
     headers.set('Accept', 'application/json');
     if (init.body && !headers.has('Content-Type')) {
@@ -59,7 +59,7 @@ async function sendRequest(path, init, accessToken) {
     if (accessToken)
         headers.set('Authorization', `Bearer ${accessToken}`);
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
         return await fetch(`${apiBaseUrl}${path}`, {
             ...init,
@@ -178,6 +178,11 @@ export const getItems = (skip = 0, limit = 100) => request(`/items/?skip=${skip}
 export const createItem = (item) => request('/items/', { method: 'POST', body: JSON.stringify(item) }, true);
 export const updateItem = (id, changes) => request(`/items/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }, true);
 export const deleteItem = (id) => request(`/items/${id}`, { method: 'DELETE' }, true);
+// Live Agent goes through the authenticated Backend proxy, never directly to Agent.
+export const chatWithAgent = (task, referenceId, sessionId, question) =>
+    request('/agents/chat', { method: 'POST', body: JSON.stringify({
+        task, reference_id: referenceId, session_id: sessionId, question
+    }) }, true, Number(import.meta.env.VITE_AGENT_REQUEST_TIMEOUT_MS || 185000));
 // --- Chat / Conversation helpers ---
 export const getConversations = () => request('/conversations', {}, true);
 export const createConversation = (task, referenceId) => request('/conversations', { method: 'POST', body: JSON.stringify({ task, reference_id: referenceId }) }, true);

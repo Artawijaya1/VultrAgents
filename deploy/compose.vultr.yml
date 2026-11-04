@@ -1,0 +1,23 @@
+# Linux VPS ONLY: host networking permits safe loopback-to-loopback S2S
+# Agent/API stay private; terminate PUBLIC TLS in Nginx on the host.
+services:
+  agent:
+    build:
+      context: ../Agents
+      dockerfile: ../deploy/Agent.Dockerfile
+    network_mode: host
+    env_file: ../Agents/.env
+    environment:
+      AGENT_DATA_MODE: http
+      PROCUREMENT_BACKEND_URL: http://127.0.0.1:8000
+      AGENT_CHAT_TIMEOUT_SECONDS: "145"
+    command: ["uvicorn", "agent_core.graph_api:app", "--host", "127.0.0.1", "--port", "8001"]
+    restart: unless-stopped
+  backend:
+    build: ../Backend
+    network_mode: host
+    env_file: ../Backend/.env
+    environment:
+      AGENT_API_URL: http://127.0.0.1:8001
+    command: ["uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000"]
+    restart: unless-stopped

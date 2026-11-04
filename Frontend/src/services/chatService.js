@@ -1,5 +1,6 @@
 import {
   ApiError,
+  chatWithAgent,
   createConversation as apiCreateConversation,
   getConversationMessages as apiGetMessages,
   sendConversationMessage as apiSendMessage,
@@ -66,34 +67,36 @@ function normalize(raw, role = 'assistant') {
 }
 
 // ── Live adapter (Backend endpoints) ────────────────────────────────
+// Backend `/conversations` endpoints are placeholders (501) in this repository.
+// Keep conversations in this browser tab during the local demo and send messages
+// via the REAL authenticated Backend Agent endpoint. Server-side AgentSession and
+// AgentRun still enforce user/PO scope. This is NOT durable message history.
+const liveConversations = new Map();
 const liveAdapter = {
   async createConversation(task, referenceId) {
-    const res = await apiCreateConversation(task, referenceId);
-    return { id: res.id, task: res.task, referenceId: res.reference_id, sessionId: res.session_id };
+    const id = crypto.randomUUID();
+    liveConversations.set(id, { task, referenceId, messages: [] });
+    return { id, task, referenceId, sessionId: id };
   },
-
   async getMessages(conversationId) {
-    const res = await apiGetMessages(conversationId);
-    const list = Array.isArray(res) ? res : (res.messages ?? []);
-    return list.map(m => normalize(m, m.role ?? 'assistant'));
+    return liveConversations.get(conversationId)?.messages ?? [];
   },
-
-  async sendMessage(conversationId, question) {
-    const res = await apiSendMessage(conversationId, question);
-    return normalize(res, 'assistant');
+  async sendMessage(conversationId, question, task, referenceId) {
+    const c = liveConversations.get(conversationId);
+    if (!c || c.task !== task || c.referenceId !== referenceId) {
+      throw new ApiError('Agent session context has changed. Start a new chat.', 400);
+    }
+    const raw = await chatWithAgent(task, referenceId, conversationId, question);
+    const userMessage = normalize({ id: crypto.randomUUID(), question }, 'user');
+    const assistantMessage = normalize(raw, 'assistant');
+    c.messages.push(userMessage, assistantMessage);
+    return assistantMessage;
   },
-
-  async sendFeedback(messageId, rating) {
-    return apiSendFeedback(messageId, rating);
+  async sendFeedback(_messageId, _rating) {
+    throw new ApiError('Message feedback is not implemented by Backend yet.', 501);
   },
-
-  async approve(approvalId) {
-    return apiApprove(approvalId);
-  },
-
-  async reject(approvalId) {
-    return apiReject(approvalId);
-  },
+  async approve(approvalId) { return apiApprove(approvalId); },
+  async reject(approvalId) { return apiReject(approvalId); },
 };
 
 // ── Mock adapter ────────────────────────────────────────────────────

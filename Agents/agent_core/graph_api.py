@@ -103,7 +103,8 @@ async def chat_agent(request: AgentChatRequest):
         return await asyncio.wait_for(run_chat(
             task=request.task, reference_id=request.reference_id,
             question=request.question, session_id=request.session_id,
-        ), timeout=50)
+        ), timeout=float(os.getenv('AGENT_CHAT_TIMEOUT_SECONDS', '145')))
+
     except TimeoutError:
         raise HTTPException(status_code=504, detail='Agent conversation timeout')
     except Exception:
