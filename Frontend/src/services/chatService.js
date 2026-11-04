@@ -60,6 +60,7 @@ function normalize(raw, role = 'assistant') {
     toolTrace: Array.isArray(raw.tool_trace) ? raw.tool_trace : [],
     requiresApproval: raw.requires_approval === true,
     approvalId: raw.approval_id ?? null,
+    approvalStatus: raw.approval_status ?? (raw.approval_id ? 'pending' : null),
     error: raw.error ?? null,
     notice: raw.notice ?? null,
     createdAt: raw.created_at ?? new Date().toISOString(),
@@ -105,6 +106,7 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
 let mockConversationCounter = 0;
 let mockMessageCounter = 0;
 const mockTurnCounters = {};
+const mockApprovalStatuses = new Map();
 
 const MOCK_RESPONSES = {
   'negotiation:PO-001': {
@@ -246,9 +248,12 @@ const mockAdapter = {
     }
 
     const msgId = `mock-msg-${++mockMessageCounter}`;
+    const approvalId = template.requires_approval ? `mock-approval-${msgId}` : null;
+    if (approvalId) mockApprovalStatuses.set(approvalId, 'pending');
     return normalize({
       ...template,
       id: msgId,
+      approval_id: approvalId,
       turn_index: turn,
       created_at: new Date().toISOString(),
     }, 'assistant');
@@ -259,14 +264,22 @@ const mockAdapter = {
     return { ok: true };
   },
 
-  async approve(_approvalId) {
+  async approve(approvalId) {
     await delay(100);
-    throw new ApiError('Approval workflow is not available yet.', 501);
+    if (mockApprovalStatuses.get(approvalId) !== 'pending') {
+      throw new ApiError('This local approval is missing or has already been decided.', 409);
+    }
+    mockApprovalStatuses.set(approvalId, 'approved');
+    return { id: approvalId, status: 'approved' };
   },
 
-  async reject(_approvalId) {
+  async reject(approvalId) {
     await delay(100);
-    throw new ApiError('Approval workflow is not available yet.', 501);
+    if (mockApprovalStatuses.get(approvalId) !== 'pending') {
+      throw new ApiError('This local approval is missing or has already been decided.', 409);
+    }
+    mockApprovalStatuses.set(approvalId, 'rejected');
+    return { id: approvalId, status: 'rejected' };
   },
 };
 

@@ -6,10 +6,17 @@ from __future__ import annotations
 import asyncio
 import os
 import secrets
+from pathlib import Path
 from uuid import uuid4
 from fastapi import FastAPI, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from typing import Literal
+from dotenv import load_dotenv
+
+# Keep the Agent API key and data mode aligned with the repository's local
+# service configuration, even when the process was launched from a shell that
+# already has stale environment variables.
+load_dotenv(Path(__file__).resolve().parents[1] / '.env', override=True)
 
 from .graph_workflow import run_workflow
 from .intelligent_graph import run_chat

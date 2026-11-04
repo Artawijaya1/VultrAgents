@@ -45,7 +45,7 @@ export default function ContextBar({ task, referenceId, onStart, disabled, hasMe
             type="text"
             value={localRef}
             onChange={e => { setLocalRef(e.target.value); setError(''); setConfirming(false); }}
-            placeholder="e.g. PO-001"
+            placeholder="e.g. AGENT-DEMO-PO-001"
             maxLength={100}
             disabled={disabled}
           />
@@ -54,6 +54,7 @@ export default function ContextBar({ task, referenceId, onStart, disabled, hasMe
           {hasMessages ? 'New conversation' : 'Start conversation'}
         </button>
       </div>
+      <p className="context-hint">Use a PO stored in Backend and assigned to your account. Demo ID: AGENT-DEMO-PO-001 (requires demo data setup).</p>
       {error && <p className="context-error">{error}</p>}
       {confirming && (
         <div className="context-confirm">

@@ -24,6 +24,7 @@ export default function ChatPage() {
   const [conversationId, setConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [approvalPendingId, setApprovalPendingId] = useState(null);
   const [useMock, setUseMock] = useState(isMockMode());
 
   // Error / banner state
@@ -38,6 +39,10 @@ export default function ChatPage() {
     if (err instanceof ApiError) {
       if (err.status === 401) {
         navigate('/login', { replace: true });
+        return;
+      }
+      if (err.status === 404 && err.message?.toLowerCase().includes('purchase order')) {
+        setInlineError('Purchase order not found. Use a PO stored in Backend and assigned to your account. For the demo, set up AGENT-DEMO-PO-001 in Backend first.');
         return;
       }
       if (err.status === 501) {
@@ -66,6 +71,7 @@ export default function ChatPage() {
     setReferenceId(newRef);
     setMessages([]);
     setConversationId(null);
+    setApprovalPendingId(null);
     clearBanner();
     setInlineError('');
     setLoading(true);
@@ -127,15 +133,26 @@ export default function ChatPage() {
     }
   }, [conversationId, task, referenceId, useMock, handleError]);
 
-  const handleApprove = useCallback(async (approvalId) => {
-    try { await approveChatApproval(approvalId, useMock); }
-    catch (err) { handleError(err); }
+  const decideApproval = useCallback(async (approvalId, decision) => {
+    setApprovalPendingId(approvalId);
+    setInlineError('');
+    try {
+      const result = decision === 'approved'
+        ? await approveChatApproval(approvalId, useMock)
+        : await rejectChatApproval(approvalId, useMock);
+      const status = result?.status || decision;
+      setMessages(current => current.map(message => message.approvalId === approvalId
+        ? { ...message, approvalStatus: status }
+        : message));
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setApprovalPendingId(null);
+    }
   }, [useMock, handleError]);
 
-  const handleReject = useCallback(async (approvalId) => {
-    try { await rejectChatApproval(approvalId, useMock); }
-    catch (err) { handleError(err); }
-  }, [useMock, handleError]);
+  const handleApprove = useCallback(approvalId => decideApproval(approvalId, 'approved'), [decideApproval]);
+  const handleReject = useCallback(approvalId => decideApproval(approvalId, 'rejected'), [decideApproval]);
 
   const hasConversation = !!conversationId;
 
@@ -195,6 +212,7 @@ export default function ChatPage() {
           messages={messages}
           loading={loading}
           task={task}
+          approvalPendingId={approvalPendingId}
           onApprove={handleApprove}
           onReject={handleReject}
         />

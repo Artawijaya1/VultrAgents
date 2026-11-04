@@ -29,7 +29,7 @@ function StatusBadge({ status }) {
   return <span className={`chat-status-badge ${cn}`}><Icon size={12} /> {STATUS_LABELS[status] || status}</span>;
 }
 
-function AssistantMessage({ msg, task, onApprove, onReject }) {
+function AssistantMessage({ msg, task, approvalPendingId, onApprove, onReject }) {
   return (
     <div className="chat-message chat-message-assistant">
       <div className="chat-message-header">
@@ -53,6 +53,8 @@ function AssistantMessage({ msg, task, onApprove, onReject }) {
       <ApprovalGate
         requiresApproval={msg.requiresApproval}
         approvalId={msg.approvalId}
+        approvalStatus={msg.approvalStatus}
+        busy={approvalPendingId === msg.approvalId}
         onApprove={onApprove}
         onReject={onReject}
       />
@@ -72,7 +74,7 @@ function UserMessage({ msg }) {
   );
 }
 
-export default function MessageList({ messages, loading, task, onApprove, onReject }) {
+export default function MessageList({ messages, loading, task, approvalPendingId, onApprove, onReject }) {
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export default function MessageList({ messages, loading, task, onApprove, onReje
       {messages.map(msg =>
         msg.role === 'user'
           ? <UserMessage key={msg.id} msg={msg} />
-          : <AssistantMessage key={msg.id} msg={msg} task={task} onApprove={onApprove} onReject={onReject} />
+          : <AssistantMessage key={msg.id} msg={msg} task={task} approvalPendingId={approvalPendingId} onApprove={onApprove} onReject={onReject} />
       )}
       {loading && (
         <div className="chat-message chat-message-assistant chat-typing" role="status">

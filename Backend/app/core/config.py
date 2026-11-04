@@ -1,9 +1,16 @@
 from functools import lru_cache
+from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError
+
+
+# Use this Backend checkout's local service configuration consistently, even
+# when the launching shell carries stale Agent credentials from another run.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=True)
 
 
 class Settings(BaseSettings):
