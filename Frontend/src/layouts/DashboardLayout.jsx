@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Activity, Bell, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Database, FileText, Handshake, LayoutDashboard, Menu, Search, Settings, ShieldAlert, ShieldCheck, Users, X } from 'lucide-react';
+import { Activity, Bell, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Database, FileText, Handshake, LayoutDashboard, Menu, MessageSquare, Search, Settings, ShieldAlert, ShieldCheck, Users, X } from 'lucide-react';
 import Logo from '../components/Logo';
 import { getAuthSession } from '../services/api';
 import './dashboard.css';
 import './dashboard-api-link.css';
 const sections = [
     { label: 'WORKSPACE', links: [{ title: 'Overview', to: '/dashboard', icon: LayoutDashboard }, { title: 'Data management', to: '/dashboard/data', icon: Database }, { title: 'Backend API', to: '/dashboard/api', icon: Activity }] },
-    { label: 'AI AGENTS', links: [{ title: 'Negotiation Copilot', to: '/negotiation', icon: Handshake }, { title: 'Fraud Detection', to: '/fraud-detection', icon: ShieldAlert }] },
+    { label: 'AI AGENTS', links: [{ title: 'Negotiation Copilot', to: '/negotiation', icon: Handshake }, { title: 'Fraud Detection', to: '/fraud-detection', icon: ShieldAlert }, { title: 'Agent Chat', to: '/dashboard/chat', icon: MessageSquare }] },
     { label: 'PROCUREMENT', links: [{ title: 'Purchase Orders', to: '/dashboard/purchase-orders', icon: ClipboardList }, { title: 'Suppliers', to: '/dashboard/suppliers', icon: Users }, { title: 'Invoices & Contracts', to: '/dashboard/invoices', icon: FileText }] },
     { label: 'GOVERNANCE', links: [{ title: 'Audit Logs', to: '/dashboard/audit-logs', icon: ShieldCheck }, { title: 'Settings', to: '/dashboard/settings', icon: Settings }] },
 ];

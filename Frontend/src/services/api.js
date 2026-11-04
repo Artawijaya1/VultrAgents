@@ -178,6 +178,15 @@ export const getItems = (skip = 0, limit = 100) => request(`/items/?skip=${skip}
 export const createItem = (item) => request('/items/', { method: 'POST', body: JSON.stringify(item) }, true);
 export const updateItem = (id, changes) => request(`/items/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }, true);
 export const deleteItem = (id) => request(`/items/${id}`, { method: 'DELETE' }, true);
+// --- Chat / Conversation helpers ---
+export const getConversations = () => request('/conversations', {}, true);
+export const createConversation = (task, referenceId) => request('/conversations', { method: 'POST', body: JSON.stringify({ task, reference_id: referenceId }) }, true);
+export const getConversationMessages = (conversationId) => request(`/conversations/${conversationId}/messages`, {}, true);
+export const sendConversationMessage = (conversationId, question) => request(`/conversations/${conversationId}/messages`, { method: 'POST', body: JSON.stringify({ question }) }, true);
+export const sendMessageFeedback = (messageId, rating) => request(`/messages/${messageId}/feedback`, { method: 'POST', body: JSON.stringify({ rating }) }, true);
+export const getApprovals = () => request('/approvals', {}, true);
+export const approveApproval = (approvalId) => request(`/approvals/${approvalId}/approve`, { method: 'POST', body: JSON.stringify({}) }, true);
+export const rejectApproval = (approvalId) => request(`/approvals/${approvalId}/reject`, { method: 'POST', body: JSON.stringify({}) }, true);
 export const apiRoutes = {
     health: `${apiOrigin}/health`,
     readiness: `${apiOrigin}/ready`,
