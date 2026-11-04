@@ -62,6 +62,24 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
+Seed synthetic procurement records for Agent connectivity tests:
+
+```powershell
+python .\scripts\seed_agent_demo.py
+```
+
+The script inserts the reserved `AGENT-DEMO-*` supplier, PO, two duplicate-number
+invoices (for human-review testing), performance, policy, fraud rule, and PO
+version. It is safe to rerun and does not overwrite existing rows. The PO is
+initially unowned if no matching Backend profile exists. After signing in once
+through the Backend, bind the demo PO to that profile:
+
+```powershell
+python .\scripts\seed_agent_demo.py --owner-email you@example.com
+```
+
+The sample records are synthetic and are not evidence of actual fraud.
+
 Interactive API documentation is available at `http://127.0.0.1:8000/docs`; health and database readiness checks are at `/health` and `/ready`.
 
 ## Supabase Auth
