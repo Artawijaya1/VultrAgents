@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import { LogOut, RefreshCw, Save, Trash2, UserRound, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError, deleteItem, getCurrentUser, getItems, getUser, getUsers, logout, updateCurrentUser, updateItem, updateUser, createItem, } from '../services/api';
+import { recordAuditEvent } from '../services/auditLogService';
 import './data-management.css';
 function messageFor(error) {
     if (error instanceof ApiError && error.status === 503) {
@@ -93,11 +94,13 @@ export default function DataManagementPage() {
                 description: itemDraft.description.trim() || null,
             };
             if (editingItemId === null) {
-                await createItem(values);
+                const created = await createItem(values);
+                recordAuditEvent({ category: 'Procurement', action: 'Workspace item created', entityType: 'Workspace item', entityId: created?.id || 'new-item', outcome: 'Created', summary: 'A workspace item was created.' });
                 setNotice('Item created.');
             }
             else {
                 await updateItem(editingItemId, values);
+                recordAuditEvent({ category: 'Procurement', action: 'Workspace item updated', entityType: 'Workspace item', entityId: editingItemId, outcome: 'Updated', summary: 'A workspace item was updated.' });
                 setNotice('Item updated.');
             }
             setItemDraft({ title: '', description: '' });
@@ -118,6 +121,7 @@ export default function DataManagementPage() {
         setNotice('');
         try {
             await deleteItem(item.id);
+            recordAuditEvent({ category: 'Procurement', action: 'Workspace item deleted', entityType: 'Workspace item', entityId: item.id, outcome: 'Deleted', summary: 'A workspace item was deleted.' });
             setItems(current => current.filter(entry => entry.id !== item.id));
             setNotice('Item deleted.');
             if (editingItemId === item.id)
@@ -144,6 +148,7 @@ export default function DataManagementPage() {
         setNotice('');
         try {
             const updated = await updateCurrentUser({ full_name: profileName.trim() || null });
+            recordAuditEvent({ category: 'System', action: 'Account profile updated', entityType: 'Account profile', entityId: 'current-user', outcome: 'Updated', summary: 'The current account profile was updated.' });
             setProfile(updated);
             setProfileName(updated.full_name ?? '');
             setNotice('Profile updated.');
@@ -161,6 +166,7 @@ export default function DataManagementPage() {
         setNotice('');
         try {
             const updated = await updateUser(user.id, { full_name: userNames[user.id]?.trim() || null });
+            recordAuditEvent({ category: 'System', action: 'User profile updated by administrator', entityType: 'User account', entityId: user.id, outcome: 'Updated', summary: 'An administrator updated a user profile.' });
             setUsers(current => current.map(entry => entry.id === updated.id ? updated : entry));
             setUserNames(current => ({ ...current, [updated.id]: updated.full_name ?? '' }));
             setNotice(`Updated ${updated.email}.`);
@@ -178,6 +184,7 @@ export default function DataManagementPage() {
         setNotice('');
         try {
             const updated = await updateUser(user.id, { is_active: !user.is_active });
+            recordAuditEvent({ category: 'System', action: `User account ${updated.is_active ? 'activated' : 'deactivated'}`, entityType: 'User account', entityId: user.id, outcome: updated.is_active ? 'Active' : 'Inactive', summary: `A user account was ${updated.is_active ? 'activated' : 'deactivated'}.`, details: { previousStatus: user.is_active ? 'Active' : 'Inactive', newStatus: updated.is_active ? 'Active' : 'Inactive' } });
             setUsers(current => current.map(entry => entry.id === updated.id ? updated : entry));
             setNotice(`${updated.email} ${updated.is_active ? 'activated' : 'deactivated'}.`);
         }
@@ -208,6 +215,7 @@ export default function DataManagementPage() {
     }
     async function signOut() {
         setError('');
+        recordAuditEvent({ category: 'System', action: 'User signed out', entityType: 'Account session', entityId: profile?.email || 'current-session', outcome: 'Signed out', summary: 'The active workspace session was signed out.' });
         try {
             await logout();
         }

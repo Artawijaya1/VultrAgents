@@ -11,6 +11,7 @@ import { NegotiationStrategies } from '../components/negotiation/NegotiationStra
 import { ProcurementContext, formatMoney, unitLabel } from '../components/negotiation/NegotiationContext';
 import { negotiationPurchaseOrders, negotiationSuppliers } from '../data/negotiationData';
 import { analyzeNegotiation, generateNegotiationDraft, getNegotiationHistory } from '../services/negotiationService';
+import { recordAuditEvent } from '../services/auditLogService';
 import { useProcurementStore } from '../services/procurementStore';
 import './negotiation.css';
 const makeInputs = (order) => ({ purchaseOrderId: order.id, offeredUnitPrice: order.currentOffer, requestedQuantity: order.quantity, proposedDeliveryDate: order.offeredDeliveryDate, targetUnitPrice: order.targetPrice, preferredDeliveryDate: order.preferredDeliveryDate, notes: '' });
@@ -111,6 +112,7 @@ export default function NegotiationPage() {
         const createdDate = new Date().toISOString().slice(0, 10);
         const newRecord = { id: `NEG-LOCAL-${String(history.length + 1).padStart(3, '0')}`, supplier: supplier.name, purchaseOrder: order.id, strategy: selectedStrategy.title, targetPrice: inputs.targetUnitPrice, status: next, createdDate };
         setHistory(current => [newRecord, ...current]);
+        recordAuditEvent({ category: 'Negotiation', action: `Negotiation strategy ${next.toLowerCase()}`, entityType: 'Purchase order', entityId: order.id, outcome: next, summary: `${selectedStrategy.title} for ${order.id} was marked ${next.toLowerCase()}.`, details: { supplierId: supplier.id, targetUnitPrice: inputs.targetUnitPrice, strategy: selectedStrategy.id } });
     };
     const startNewAnalysis = () => { const initial = negotiationPurchaseOrders[0]; setSupplier(negotiationSuppliers[0]); setOrder(initial); setInputs(makeInputs(initial)); setAnalysis(null); setAnalysisError(''); setAnalysisLoading(false); setStrategy('price'); setReviewStatus('Pending Review'); document.getElementById('procurement-context')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     const scrollToHistory = () => document.getElementById('negotiation-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' });

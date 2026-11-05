@@ -1,4 +1,5 @@
 import { initialNegotiationHistory } from '../data/negotiationData';
+import { recordAuditEvent } from './auditLogService';
 import {
   ApiError,
   createNegotiation,
@@ -147,11 +148,15 @@ export async function getNegotiationHistory(forceMock = false) {
 }
 
 export async function analyzeNegotiation(input, order, supplier, forceMock = false) {
-  return getAdapter(forceMock).analyzeNegotiation(input, order, supplier);
+  const result = await getAdapter(forceMock).analyzeNegotiation(input, order, supplier);
+  recordAuditEvent({ category: 'Negotiation', action: 'Negotiation analysis generated', entityType: 'Purchase order', entityId: order.id, outcome: 'Draft created', summary: `Negotiation guidance generated for ${order.id}.`, details: { supplierId: supplier.id, strategy: 'Analysis' } });
+  return result;
 }
 
 export async function generateNegotiationDraft(input, order, supplier, strategy, tone, language, forceMock = false) {
-  return getAdapter(forceMock).generateNegotiationDraft(input, order, supplier, strategy, tone, language);
+  const draft = await getAdapter(forceMock).generateNegotiationDraft(input, order, supplier, strategy, tone, language);
+  recordAuditEvent({ category: 'Negotiation', action: 'Negotiation message draft generated', entityType: 'Purchase order', entityId: order.id, outcome: 'Draft created', summary: `A ${strategy} negotiation draft was generated for ${supplier.name}.`, details: { supplierId: supplier.id, strategy, tone, language } });
+  return draft;
 }
 
 export { ApiError };

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { negotiationPurchaseOrders, negotiationSuppliers } from '../data/negotiationData';
+import { recordAuditEvent } from './auditLogService';
 const supplierMeta = {
     'SUP-0018': { email: 'procurement@globalsupply.example', phone: '+62 21 5550 0180', location: 'Jakarta, Indonesia', status: 'Active', spendYtd: 186400, risk: 'Low' },
     'SUP-0024': { email: 'account.team@mitratech.example', phone: '+62 22 5550 0240', location: 'Bandung, Indonesia', status: 'Active', spendYtd: 294800, risk: 'Medium' },
@@ -18,8 +19,8 @@ const seedInvoices = [
     { id: 'INV-2026-0739', supplierId: 'SUP-0056', purchaseOrderId: 'PO-2026-00115', contractId: 'CTR-2025-0261', issueDate: '2026-11-01', dueDate: '2026-12-16', amount: 92750, currency: 'USD', status: 'Pending Match', description: 'Sensor control modules · batch 06' },
     { id: 'INV-2026-0694', supplierId: 'SUP-0031', purchaseOrderId: 'PO-2026-00125', contractId: 'CTR-2025-0091', issueDate: '2026-10-29', dueDate: '2026-11-28', amount: 58600, currency: 'USD', status: 'Matched', description: 'Reinforced shipping cartons · monthly replenishment' },
 ];
-const addAudit = (audit, entityId, action) => [{ id: `AUD-${Date.now()}`, date: new Date().toISOString(), actor: 'Jordan Davis', action, entityId }, ...audit];
-export const useProcurementStore = create()(persist((set) => ({
+const addAudit = (audit, event) => [{ id: event?.id ?? `AUD-${Date.now()}`, date: event?.timestamp ?? new Date().toISOString(), actor: event?.actor ?? 'Jordan Davis', action: event?.action ?? 'Procurement record updated', entityId: event?.entityId }, ...audit];
+export const useProcurementStore = create()(persist((set, get) => ({
     suppliers: seedSuppliers,
     purchaseOrders: seedOrders,
     invoices: seedInvoices,
@@ -32,7 +33,22 @@ export const useProcurementStore = create()(persist((set) => ({
     selectContext: (supplierId, purchaseOrderId) => set({ selectedSupplierId: supplierId, selectedPurchaseOrderId: purchaseOrderId }),
     selectInvoice: (invoiceId) => set({ selectedInvoiceId: invoiceId }),
     selectContract: (contractId) => set({ selectedContractId: contractId }),
-    updateSupplierStatus: (id, status, action) => set(state => ({ suppliers: state.suppliers.map(item => item.id === id ? { ...item, status } : item), audit: addAudit(state.audit, id, action) })),
-    updateOrderStatus: (id, status, action) => set(state => ({ purchaseOrders: state.purchaseOrders.map(item => item.id === id ? { ...item, status } : item), audit: addAudit(state.audit, id, action) })),
-    updateInvoiceStatus: (id, status, action) => set(state => ({ invoices: state.invoices.map(item => item.id === id ? { ...item, status } : item), audit: addAudit(state.audit, id, action) })),
+    updateSupplierStatus: (id, status, action) => {
+        const item = get().suppliers.find(record => record.id === id);
+        if (!item || item.status === status) return;
+        const event = recordAuditEvent({ category: 'Procurement', action, entityType: 'Supplier', entityId: id, outcome: status, summary: `Supplier status changed from ${item.status} to ${status}.`, details: { previousStatus: item.status, newStatus: status } });
+        set(state => ({ suppliers: state.suppliers.map(record => record.id === id ? { ...record, status } : record), audit: addAudit(state.audit, event ?? { id, action, entityId: id }) }));
+    },
+    updateOrderStatus: (id, status, action) => {
+        const item = get().purchaseOrders.find(record => record.id === id);
+        if (!item || item.status === status) return;
+        const event = recordAuditEvent({ category: 'Procurement', action, entityType: 'Purchase order', entityId: id, outcome: status, summary: `Purchase order status changed from ${item.status} to ${status}.`, details: { previousStatus: item.status, newStatus: status } });
+        set(state => ({ purchaseOrders: state.purchaseOrders.map(record => record.id === id ? { ...record, status } : record), audit: addAudit(state.audit, event ?? { id, action, entityId: id }) }));
+    },
+    updateInvoiceStatus: (id, status, action) => {
+        const item = get().invoices.find(record => record.id === id);
+        if (!item || item.status === status) return;
+        const event = recordAuditEvent({ category: 'Procurement', action, entityType: 'Invoice', entityId: id, outcome: status, summary: `Invoice status changed from ${item.status} to ${status}.`, details: { previousStatus: item.status, newStatus: status } });
+        set(state => ({ invoices: state.invoices.map(record => record.id === id ? { ...record, status } : record), audit: addAudit(state.audit, event ?? { id, action, entityId: id }) }));
+    },
 }), { name: 'procuremind-demo-procurement-v1', storage: createJSONStorage(() => localStorage) }));

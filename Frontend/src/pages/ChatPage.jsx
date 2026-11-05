@@ -13,6 +13,7 @@ import {
   validateQuestion,
 } from '../services/chatService';
 import { ApiError } from '../services/api';
+import { recordAuditEvent } from '../services/auditLogService';
 import './chat.css';
 
 export default function ChatPage() {
@@ -126,6 +127,7 @@ export default function ChatPage() {
     try {
       const assistantMsg = await sendChatMessage(cid, questionText, task, referenceId, useMock);
       setMessages(prev => [...prev, assistantMsg]);
+      recordAuditEvent({ category: 'Agent', action: 'Agent chat response received', entityType: 'Purchase order', entityId: referenceId, outcome: assistantMsg.status || 'Completed', summary: `Agent chat handled a ${task} request for ${referenceId}.`, details: { task, sessionId: cid } });
     } catch (err) {
       handleError(err);
     } finally {
@@ -144,6 +146,7 @@ export default function ChatPage() {
       setMessages(current => current.map(message => message.approvalId === approvalId
         ? { ...message, approvalStatus: status }
         : message));
+      recordAuditEvent({ category: 'Agent', action: `Agent approval ${status}`, entityType: 'Approval request', entityId: approvalId, outcome: status, summary: `Approval request ${approvalId} was ${status}.`, details: { status } });
     } catch (err) {
       handleError(err);
     } finally {

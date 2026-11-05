@@ -1,4 +1,5 @@
 import { anomalyDistribution, fraudAlerts, riskOverview, riskTrend } from '../data/fraudMockData';
+import { recordAuditEvent } from './auditLogService';
 import {
   ApiError,
   explainFraudAlert as apiExplainAlert,
@@ -211,7 +212,20 @@ export async function updateInvestigationStatus(alertId, status, forceMock = fal
 }
 
 export async function appendAuditEvent(alertId, event, forceMock = false) {
-  return getAdapter(forceMock).appendAuditEvent(alertId, event);
+  const created = await getAdapter(forceMock).appendAuditEvent(alertId, event);
+  if (created) {
+    recordAuditEvent({
+      id: created.id,
+      category: 'Fraud',
+      action: event.action,
+      entityType: 'Fraud alert',
+      entityId: alertId,
+      outcome: event.newStatus || 'Recorded',
+      summary: event.notes || event.action,
+      details: { previousStatus: event.previousStatus, newStatus: event.newStatus },
+    });
+  }
+  return created;
 }
 
 export async function analyzeTransaction(alert, forceMock = false) {
