@@ -41,6 +41,8 @@ dbname=postgres
 
 The backend builds a `postgresql+psycopg` URL and safely encodes the password. A valid `DATABASE_URL` takes precedence; if it is malformed, the separate parameters are used. Use the exact connection details shown in **Project Settings → Database → Connect**, especially the pooler username when using the transaction pooler. Never commit `.env`.
 
+Set `CORS_ORIGINS` to the frontend's browser-visible origin(s), either as a JSON array (for example `["https://your-frontend.example"]`) or as comma-separated URLs. Do not use a Railway private `.internal` hostname as a browser origin.
+
 For Supabase transaction-pooler compatibility, the application and Alembic disable psycopg's automatic prepared-statement threshold.
 
 Generate a private API key for agent-only endpoints and store it as `INTERNAL_API_KEY` in `.env` (do not commit or expose it in frontend code):
