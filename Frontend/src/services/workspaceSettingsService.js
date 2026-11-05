@@ -1,9 +1,9 @@
 const STORAGE_KEY = 'procuremind-workspace-settings-v1';
 
 export const DEFAULT_WORKSPACE_SETTINGS = {
-  workspaceName: 'Acme Corporation',
+  workspaceName: '',
   timezone: 'Asia/Makassar',
-  currency: 'USD',
+  currency: 'IDR',
   dateFormat: 'DD MMM YYYY',
   defaultModule: '/dashboard',
   approvalThreshold: '50000',

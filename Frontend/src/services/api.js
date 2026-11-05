@@ -198,6 +198,7 @@ export const getConversationMessages = (conversationId) => request(`/conversatio
 export const sendConversationMessage = (conversationId, question) => request(`/conversations/${conversationId}/messages`, { method: 'POST', body: JSON.stringify({ question }) }, true);
 export const sendMessageFeedback = (messageId, rating) => request(`/messages/${messageId}/feedback`, { method: 'POST', body: JSON.stringify({ rating }) }, true);
 export const getApprovals = () => request('/approvals', {}, true);
+export const getAuditLogs = (skip = 0, limit = 100) => request(`/audit-logs?skip=${skip}&limit=${limit}`, {}, true);
 export const approveApproval = (approvalId) => request(`/approvals/${approvalId}/approve`, { method: 'POST', body: JSON.stringify({}) }, true);
 export const rejectApproval = (approvalId) => request(`/approvals/${approvalId}/reject`, { method: 'POST', body: JSON.stringify({}) }, true);
 // --- Negotiation helpers (all 501 placeholder) ---

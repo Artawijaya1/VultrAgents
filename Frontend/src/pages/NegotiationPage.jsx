@@ -1,120 +1,72 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, FilePlus2, Handshake, History, Sparkles } from 'lucide-react';
-import AIRecommendationPanel from '../components/negotiation/AIRecommendationPanel';
-import ApprovalPanel from '../components/negotiation/ApprovalPanel';
-import HistoricalAnalysis from '../components/negotiation/HistoricalAnalysis';
-import NegotiationComposer from '../components/negotiation/NegotiationComposer';
-import NegotiationHistory from '../components/negotiation/NegotiationHistory';
-import { NegotiationStrategies } from '../components/negotiation/NegotiationStrategyCard';
-import { ProcurementContext, formatMoney, unitLabel } from '../components/negotiation/NegotiationContext';
-import { negotiationPurchaseOrders, negotiationSuppliers } from '../data/negotiationData';
-import { analyzeNegotiation, generateNegotiationDraft, getNegotiationHistory } from '../services/negotiationService';
-import { recordAuditEvent } from '../services/auditLogService';
-import { useProcurementStore } from '../services/procurementStore';
+import { ArrowRight, Handshake, RefreshCw, ShieldCheck } from 'lucide-react';
+import { createNegotiation, getNegotiations } from '../services/api';
+import { getPurchaseOrders, getSuppliers } from '../services/procurementService';
 import './negotiation.css';
-const makeInputs = (order) => ({ purchaseOrderId: order.id, offeredUnitPrice: order.currentOffer, requestedQuantity: order.quantity, proposedDeliveryDate: order.offeredDeliveryDate, targetUnitPrice: order.targetPrice, preferredDeliveryDate: order.preferredDeliveryDate, notes: '' });
+
+const money = (value, currency = 'IDR') => new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'IDR', maximumFractionDigits: 0 }).format(value || 0);
+
 export default function NegotiationPage() {
-    const selectedSupplierId = useProcurementStore(state => state.selectedSupplierId);
-    const selectedPurchaseOrderId = useProcurementStore(state => state.selectedPurchaseOrderId);
-    const selectContext = useProcurementStore(state => state.selectContext);
-    const [supplier, setSupplier] = useState(negotiationSuppliers[0]);
-    const [order, setOrder] = useState(negotiationPurchaseOrders[0]);
-    const [inputs, setInputs] = useState(() => makeInputs(negotiationPurchaseOrders[0]));
-    const [analysis, setAnalysis] = useState(null);
-    const [analysisLoading, setAnalysisLoading] = useState(false);
-    const [analysisError, setAnalysisError] = useState('');
-    const analysisRequest = useRef(0);
-    const [strategy, setStrategy] = useState('price');
-    const [reviewStatus, setReviewStatus] = useState('Pending Review');
-    const [history, setHistory] = useState([]);
-    useEffect(() => { let active = true; void getNegotiationHistory().then(records => { if (active)
-        setHistory(records); }); return () => { active = false; }; }, []);
-    useEffect(() => {
-        const nextOrder = negotiationPurchaseOrders.find(item => item.id === selectedPurchaseOrderId);
-        const nextSupplier = negotiationSuppliers.find(item => item.id === selectedSupplierId);
-        if (nextOrder) {
-            setOrder(nextOrder);
-            setSupplier(negotiationSuppliers.find(item => item.id === nextOrder.supplierId) ?? nextSupplier ?? negotiationSuppliers[0]);
-        }
-        else if (nextSupplier)
-            setSupplier(nextSupplier);
-    }, [selectedSupplierId, selectedPurchaseOrderId]);
-    useEffect(() => { analysisRequest.current += 1; setInputs(makeInputs(order)); setAnalysis(null); setAnalysisError(''); setAnalysisLoading(false); setReviewStatus('Pending Review'); }, [order.id]);
-    const updateInputs = action => { analysisRequest.current += 1; setInputs(action); setAnalysis(null); setAnalysisError(''); setAnalysisLoading(false); setReviewStatus('Pending Review'); };
-    const contextInputs = { ...inputs, purchaseOrderId: order.id };
-    const average = useMemo(() => order.priceHistory.reduce((sum, item) => sum + item.unitPrice, 0) / Math.max(order.priceHistory.length, 1), [order]);
-    const strategies = useMemo(() => {
-        const priceReduction = Math.max(0, inputs.offeredUnitPrice - inputs.targetUnitPrice);
-        const priceSaving = priceReduction * inputs.requestedQuantity;
-        const alternativeQuantity = Math.ceil(inputs.requestedQuantity * 1.15);
-        const volumePrice = inputs.offeredUnitPrice * .96;
-        const volumeSavings = Math.max(0, (inputs.offeredUnitPrice - volumePrice) * alternativeQuantity);
-        const offeredDate = new Date(`${inputs.proposedDeliveryDate}T12:00:00`);
-        const targetDate = new Date(`${inputs.preferredDeliveryDate}T12:00:00`);
-        const dayDifference = Math.round((offeredDate.getTime() - targetDate.getTime()) / 86400000);
-        const volumeLeverage = inputs.requestedQuantity >= order.minimumOrderQuantity * 1.5;
-        return [
-            { id: 'price', title: 'Price optimization', objective: 'Reduce the unit purchasing price', target: `${formatMoney(inputs.targetUnitPrice)} / ${unitLabel(order.unit)} · ${inputs.offeredUnitPrice > 0 ? (priceReduction / inputs.offeredUnitPrice * 100).toFixed(1) : '0.0'}% ${inputs.targetUnitPrice <= inputs.offeredUnitPrice ? 'below' : 'above'} offer`, impact: priceSaving, impactLabel: 'estimated savings at requested quantity', rationale: inputs.offeredUnitPrice > average ? `The offer is above the ${formatMoney(average)} recorded purchase average.` : inputs.offeredUnitPrice < average ? `The offer is already below the ${formatMoney(average)} recorded purchase average; use the target carefully.` : 'The offer aligns with the recorded purchase average.', advantages: ['Clear, measurable price anchor', 'Grounded in purchase history'], tradeoff: 'Supplier may request a longer lead time or reduced service scope.' },
-            { id: 'delivery', title: 'Delivery optimization', objective: 'Improve delivery timing and certainty', target: `Request ${inputs.preferredDeliveryDate || 'a preferred date'} · ${dayDifference > 0 ? `${dayDifference} days earlier` : dayDifference < 0 ? `${Math.abs(dayDifference)} days after offer` : 'same day as offer'}`, impact: 0, impactLabel: 'no price savings estimated', rationale: `Supplier has a ${supplier.onTimeRate}% historical on-time rate and ${supplier.averageDeliveryDays}-day average lead time.`, advantages: ['Improves schedule predictability', 'Keeps price discussion separate'], tradeoff: 'An earlier commitment may require flexible order scheduling or expedited freight.' },
-            { id: 'volume', title: 'Volume negotiation', objective: 'Use order quantity as negotiation leverage', target: `${alternativeQuantity.toLocaleString()} ${order.unit} · illustrative ${formatMoney(volumePrice)} unit opportunity`, impact: volumeSavings, impactLabel: 'illustrative volume price estimate', rationale: volumeLeverage ? `Current quantity is ${inputs.requestedQuantity.toLocaleString()}, above the ${order.minimumOrderQuantity.toLocaleString()} minimum; a larger commitment can support a volume discussion.` : `A ${alternativeQuantity.toLocaleString()}-unit scenario is shown as a discussion option. Supplier volume pricing is not known.`, advantages: ['Adds a quantity-based discussion point', 'Can align the order with replenishment needs'], tradeoff: 'Larger quantities increase working capital and inventory exposure.' },
-        ];
-    }, [inputs, order, supplier, average]);
-    const selectedStrategy = strategies.find(item => item.id === strategy) ?? strategies[0];
-    const validate = () => {
-        if (!Number.isFinite(inputs.offeredUnitPrice) || inputs.offeredUnitPrice <= 0)
-            return 'Enter a supplier offer greater than zero.';
-        if (!Number.isFinite(inputs.targetUnitPrice) || inputs.targetUnitPrice <= 0)
-            return 'Enter a target unit price greater than zero.';
-        if (!Number.isInteger(inputs.requestedQuantity) || inputs.requestedQuantity < order.minimumOrderQuantity)
-            return `Quantity must be a whole number of at least ${order.minimumOrderQuantity.toLocaleString()} ${order.unit}.`;
-        if (!inputs.proposedDeliveryDate || !inputs.preferredDeliveryDate)
-            return 'Choose both proposed and preferred delivery dates.';
-        return '';
-    };
-    const runAnalysis = async () => {
-        const validation = validate();
-        if (validation) {
-            setAnalysisError(validation);
-            setAnalysis(null);
-            return;
-        }
-        setAnalysisError('');
-        setAnalysis(null);
-        setAnalysisLoading(true);
-        const requestId = ++analysisRequest.current;
-        try {
-            const result = await analyzeNegotiation(contextInputs, order, supplier);
-            if (analysisRequest.current === requestId)
-                setAnalysis(result);
-        }
-        catch (err) {
-            if (analysisRequest.current === requestId) {
-                if (err && typeof err === 'object' && err.status === 501) {
-                    setAnalysisError('Live negotiation analysis is not available yet (backend returns 501).');
-                } else if (err && typeof err === 'object' && (err.status === 502 || err.status === 504)) {
-                    setAnalysisError('Temporary server error. Please retry.');
-                } else {
-                    setAnalysisError('The analysis could not be completed. Please try again.');
-                }
-            }
-        }
-        finally {
-            if (analysisRequest.current === requestId)
-                setAnalysisLoading(false);
-        }
-    };
-    const generateDraft = (tone, language) => generateNegotiationDraft(contextInputs, order, supplier, strategy, tone, language);
-    const confirmReview = (action) => {
-        const next = action === 'Approve Strategy' ? 'Approved' : action === 'Request Revision' ? 'Revision Requested' : 'Rejected';
-        setReviewStatus(next);
-        const createdDate = new Date().toISOString().slice(0, 10);
-        const newRecord = { id: `NEG-LOCAL-${String(history.length + 1).padStart(3, '0')}`, supplier: supplier.name, purchaseOrder: order.id, strategy: selectedStrategy.title, targetPrice: inputs.targetUnitPrice, status: next, createdDate };
-        setHistory(current => [newRecord, ...current]);
-        recordAuditEvent({ category: 'Negotiation', action: `Negotiation strategy ${next.toLowerCase()}`, entityType: 'Purchase order', entityId: order.id, outcome: next, summary: `${selectedStrategy.title} for ${order.id} was marked ${next.toLowerCase()}.`, details: { supplierId: supplier.id, targetUnitPrice: inputs.targetUnitPrice, strategy: selectedStrategy.id } });
-    };
-    const startNewAnalysis = () => { const initial = negotiationPurchaseOrders[0]; setSupplier(negotiationSuppliers[0]); setOrder(initial); setInputs(makeInputs(initial)); setAnalysis(null); setAnalysisError(''); setAnalysisLoading(false); setStrategy('price'); setReviewStatus('Pending Review'); document.getElementById('procurement-context')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
-    const scrollToHistory = () => document.getElementById('negotiation-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    return _jsxs("main", { className: "negotiation-page", children: [_jsxs("header", { className: "neg-page-header", children: [_jsxs("div", { className: "neg-page-title", children: [_jsxs("div", { className: "neg-breadcrumb", children: [_jsx(Link, { to: "/dashboard", children: "Dashboard" }), _jsx(ArrowRight, { size: 13 }), _jsx("span", { children: "Negotiation Copilot" })] }), _jsxs("div", { className: "neg-title-line", children: [_jsx("span", { className: "neg-title-icon", children: _jsx(Handshake, { size: 21 }) }), _jsxs("div", { children: [_jsx("h1", { children: "AI Negotiation Copilot" }), _jsx("p", { children: "Develop smarter supplier negotiation strategies using purchasing history, contract intelligence, and AI-powered recommendations." })] })] })] }), _jsxs("div", { className: "neg-page-actions", children: [_jsxs("button", { className: "neg-button neg-button-quiet", onClick: scrollToHistory, children: [_jsx(History, { size: 14 }), " Negotiation history"] }), _jsxs("button", { className: "neg-button neg-button-primary", onClick: startNewAnalysis, children: [_jsx(FilePlus2, { size: 14 }), " New analysis"] })] })] }), _jsxs("div", { className: "neg-demo-banner", children: [_jsx("span", { className: "demo-info", children: "i" }), _jsx("span", { children: "Frontend demonstration" }), _jsx("span", { className: "banner-separator", children: "\u00B7" }), _jsx("span", { children: "Supplier records, price history, recommendations, and review actions are local mock data." })] }), _jsx(ProcurementContext, { supplier: supplier, order: order, inputs: inputs, setSupplier: value => { setSupplier(value); selectContext(value.id, negotiationPurchaseOrders.find(item => item.supplierId === value.id)?.id ?? order.id); }, setOrder: value => { setOrder(value); selectContext(value.supplierId, value.id); }, setInputs: updateInputs }), _jsx(HistoricalAnalysis, { order: order, supplier: supplier, offer: inputs.offeredUnitPrice, target: inputs.targetUnitPrice }), _jsx(AIRecommendationPanel, { analysis: analysis, loading: analysisLoading, error: analysisError, onAnalyze: runAnalysis, inputs: contextInputs, order: order, supplier: supplier }), _jsx(NegotiationStrategies, { strategies: strategies, selected: strategy, onSelect: value => { setStrategy(value); setReviewStatus('Pending Review'); } }), _jsx(NegotiationComposer, { supplier: supplier, order: order, inputs: contextInputs, strategy: strategy, onStrategyChange: value => { setStrategy(value); setReviewStatus('Pending Review'); }, onGenerate: generateDraft }), _jsx(ApprovalPanel, { status: reviewStatus, strategy: strategy, terms: selectedStrategy.target, savings: selectedStrategy.impact, disabled: !analysis || analysisLoading, onConfirm: confirmReview }), _jsx(NegotiationHistory, { records: history }), _jsxs("div", { className: "neg-page-footer", children: [_jsx(Sparkles, { size: 14 }), " Simulated intelligence for product demonstration \u00B7 Human review required for all procurement decisions."] })] });
+  const [orders, setOrders] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [targetPrice, setTargetPrice] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [purchaseOrders, supplierRows, negotiations] = await Promise.all([getPurchaseOrders(), getSuppliers(), getNegotiations()]);
+      setOrders(purchaseOrders);
+      setSuppliers(supplierRows);
+      setHistory(Array.isArray(negotiations) ? negotiations : negotiations?.items ?? []);
+      setSelectedId(current => current && purchaseOrders.some(order => order.id === current) ? current : purchaseOrders[0]?.id ?? '');
+    } catch (err) {
+      setError(err?.message || 'Could not load purchase orders from Backend.');
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const order = orders.find(item => item.id === selectedId);
+  const supplier = suppliers.find(item => item.id === order?.supplierId);
+  useEffect(() => { if (order) setTargetPrice(String(order.targetPrice || '')); }, [order?.id, order?.targetPrice]);
+  const proposed = Number(targetPrice);
+  const savings = order && Number.isFinite(proposed) ? Math.max(0, (order.currentOffer - proposed) * order.quantity) : 0;
+  const recommendations = useMemo(() => {
+    if (!order) return [];
+    const reference = order.historicalPrice;
+    return [
+      { title: 'Price target', value: money(proposed || order.targetPrice, order.currency), reason: `Database budget ceiling is ${money(order.targetPrice, order.currency)} per unit; previous unit price is ${money(reference, order.currency)}.` },
+      { title: 'Current offer', value: money(order.currentOffer, order.currency), reason: `Difference from previous recorded price: ${money(order.currentOffer - reference, order.currency)} per unit.` },
+      { title: 'Potential price gap', value: money(savings, order.currency), reason: 'Calculated from this purchase order quantity and the target price entered above.' },
+    ];
+  }, [order, proposed, savings]);
+
+  const saveAnalysis = async () => {
+    if (!order || !Number.isFinite(proposed) || proposed <= 0) return;
+    setSaving(true); setNotice(''); setError('');
+    try {
+      const record = await createNegotiation({ po_id: order.id, context: { target_unit_price: proposed, offered_unit_price: order.currentOffer, quantity: order.quantity, currency: order.currency } });
+      setHistory(current => [record, ...current]);
+      setNotice('Analysis saved in the Backend database.');
+    } catch (err) { setError(err?.message || 'Could not save the analysis.'); }
+    finally { setSaving(false); }
+  };
+
+  return <main className="negotiation-page">
+    <header className="neg-page-header"><div className="neg-page-title"><div className="neg-breadcrumb"><Link to="/dashboard">Dashboard</Link><ArrowRight size={13} /><span>Negotiation Copilot</span></div><div className="neg-title-line"><span className="neg-title-icon"><Handshake size={21} /></span><div><h1>Negotiation Copilot</h1><p>Review negotiation guidance grounded in your database purchase order and supplier records.</p></div></div></div><button className="neg-button neg-button-quiet" onClick={load}><RefreshCw size={14} /> Refresh records</button></header>
+    <div className="neg-demo-banner"><ShieldCheck size={15} /><span>Database-backed procurement records</span><span className="banner-separator">·</span><span>Recommendations use the selected order's actual prices and quantity.</span></div>
+    {error && <div className="fraud-page-error" role="alert">{error}</div>}{notice && <div className="neg-demo-banner" role="status">{notice}</div>}
+    <section className="negotiation-context-panel"><header><div><small>PROCUREMENT CONTEXT</small><h2>Select a purchase order</h2></div></header><div className="negotiation-context-grid"><label className="neg-field"><span>Purchase order</span><select value={selectedId} onChange={event => setSelectedId(event.target.value)}><option value="">Select a database purchase order</option>{orders.map(item => <option key={item.id} value={item.id}>{item.id} · {item.productName}</option>)}</select></label><div className="neg-field"><span>Supplier</span><b>{supplier?.name || '—'}</b></div><div className="neg-field"><span>Order quantity</span><b>{order ? `${order.quantity} ${order.unit || 'units'}` : '—'}</b></div><div className="neg-field"><span>Current offer</span><b>{order ? money(order.currentOffer, order.currency) : '—'}</b></div><div className="neg-field"><span>Previous unit price</span><b>{order ? money(order.historicalPrice, order.currency) : '—'}</b></div><div className="neg-field"><span>Budget ceiling</span><b>{order ? money(order.targetPrice, order.currency) : '—'}</b></div></div></section>
+    {order && <><section className="negotiation-context-panel"><header><div><small>GUIDANCE BASED ON DATABASE VALUES</small><h2>Negotiation reference</h2></div></header><label className="neg-field"><span>Target unit price</span><input type="number" min="1" value={targetPrice} onChange={event => setTargetPrice(event.target.value)} /></label><div className="negotiation-strategy-grid">{recommendations.map(item => <article className="neg-strategy-card" key={item.title}><h3>{item.title}</h3><strong>{item.value}</strong><p>{item.reason}</p></article>)}</div><p>Estimated savings against current offer: <b>{money(savings, order.currency)}</b></p><button className="neg-button neg-button-primary" onClick={saveAnalysis} disabled={saving || !Number.isFinite(proposed) || proposed <= 0}>{saving ? 'Saving…' : 'Save analysis'} <ArrowRight size={14} /></button></section>
+      <section className="negotiation-context-panel"><header><div><small>DATABASE HISTORY</small><h2>Saved negotiations</h2></div></header>{history.length ? <div className="negotiation-history-list">{history.map((item, index) => <article key={item.negotiation_id ?? item.id ?? index}><b>{item.purchase_order_id ?? item.po_id}</b><span>{item.supplier_name || 'Supplier record'}</span><span>{item.status}</span><time>{item.created_at ? new Date(item.created_at).toLocaleString() : ''}</time></article>)}</div> : <p>{loading ? 'Loading saved negotiations…' : 'No saved negotiations for this account yet.'}</p>}</section></>}
+    {!order && !loading && !error && <section className="negotiation-context-panel"><h2>No purchase orders available</h2><p>This account has no purchase orders in the Backend database.</p><Link to="/dashboard/purchase-orders">Open Purchase Orders <ArrowRight size={14} /></Link></section>}
+    {loading && <p>Loading purchase orders from Backend…</p>}
+  </main>;
 }

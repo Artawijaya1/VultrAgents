@@ -1,54 +1,5 @@
-import {
-  ApiError,
-  chatWithAgent,
-  createConversation as apiCreateConversation,
-  getConversationMessages as apiGetMessages,
-  sendConversationMessage as apiSendMessage,
-  sendMessageFeedback as apiSendFeedback,
-  approveApproval as apiApprove,
-  rejectApproval as apiReject,
-} from './api';
+import { ApiError, chatWithAgent, approveApproval, rejectApproval } from './api';
 
-// ── Internal message model ──────────────────────────────────────────
-// Every component reads ONLY this shape. Raw backend/agent fields are
-// normalized here and nowhere else.
-//
-// {
-//   id:               string
-//   role:             'user' | 'assistant'
-//   content:          string          (answer text or user question)
-//   status:           string | null   (draft, review_required, no_flags, …)
-//   verifiedResult:   object | null
-//   precheck:         object | null   ({ flag_count, findings[] })
-//   toolTrace:        array           ([{ tool, reference_id, ok }])
-//   requiresApproval: boolean
-//   approvalId:       string | null
-//   error:            string | null
-//   notice:           string | null
-//   createdAt:        string          (ISO)
-// }
-
-const REFERENCE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/;
-const TASKS = ['negotiation', 'fraud'];
-
-export function validateTask(task) {
-  if (!TASKS.includes(task)) return 'Task must be "negotiation" or "fraud".';
-  return '';
-}
-
-export function validateReferenceId(id) {
-  if (!id) return 'Purchase Order ID is required.';
-  if (!REFERENCE_ID_RE.test(id)) return 'Invalid PO ID format (alphanumeric, max 100 chars).';
-  return '';
-}
-
-export function validateQuestion(q) {
-  if (!q || !q.trim()) return 'Question is required.';
-  if (q.length > 1000) return `Question too long (${q.length}/1000 chars).`;
-  return '';
-}
-
-// ── Normalize raw backend/agent payload into internal model ─────────
 function normalize(raw, role = 'assistant') {
   return {
     id: raw.id ?? raw.message_id ?? crypto.randomUUID(),
@@ -67,258 +18,28 @@ function normalize(raw, role = 'assistant') {
   };
 }
 
-// ── Live adapter (Backend endpoints) ────────────────────────────────
-// Backend `/conversations` endpoints are placeholders (501) in this repository.
-// Keep conversations in this browser tab during the local demo and send messages
-// via the REAL authenticated Backend Agent endpoint. Server-side AgentSession and
-// AgentRun still enforce user/PO scope. This is NOT durable message history.
-const liveConversations = new Map();
-const liveAdapter = {
-  async createConversation(task, referenceId) {
-    const id = crypto.randomUUID();
-    liveConversations.set(id, { task, referenceId, messages: [] });
-    return { id, task, referenceId, sessionId: id };
-  },
-  async getMessages(conversationId) {
-    return liveConversations.get(conversationId)?.messages ?? [];
-  },
-  async sendMessage(conversationId, question, task, referenceId) {
-    const c = liveConversations.get(conversationId);
-    if (!c || c.task !== task || c.referenceId !== referenceId) {
-      throw new ApiError('Agent session context has changed. Start a new chat.', 400);
-    }
-    const raw = await chatWithAgent(task, referenceId, conversationId, question);
-    const userMessage = normalize({ id: crypto.randomUUID(), question }, 'user');
-    const assistantMessage = normalize(raw, 'assistant');
-    c.messages.push(userMessage, assistantMessage);
-    return assistantMessage;
-  },
-  async sendFeedback(_messageId, _rating) {
-    throw new ApiError('Message feedback is not implemented by Backend yet.', 501);
-  },
-  async approve(approvalId) { return apiApprove(approvalId); },
-  async reject(approvalId) { return apiReject(approvalId); },
-};
+const REFERENCE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/;
+export function validateTask(task) { return ['negotiation', 'fraud'].includes(task) ? '' : 'Task must be "negotiation" or "fraud".'; }
+export function validateReferenceId(id) { return !id ? 'Purchase Order ID is required.' : !REFERENCE_ID_RE.test(id) ? 'Invalid PO ID format (alphanumeric, max 100 chars).' : ''; }
+export function validateQuestion(question) { return !question?.trim() ? 'Question is required.' : question.length > 1000 ? `Question too long (${question.length}/1000 chars).` : ''; }
 
-// ── Mock adapter ────────────────────────────────────────────────────
-const delay = (ms) => new Promise(r => setTimeout(r, ms));
-
-let mockConversationCounter = 0;
-let mockMessageCounter = 0;
-const mockTurnCounters = {};
-const mockApprovalStatuses = new Map();
-
-const MOCK_RESPONSES = {
-  'negotiation:PO-001': {
-    status: 'draft',
-    answer: 'Based on historical purchase data, I recommend negotiating a 12% reduction from the current offered unit price. The supplier has consistently delivered on time, which gives us leverage to focus on pricing. Consider a volume-based approach for quantities above 500 units.',
-    verified_result: {
-      current_offer: 85000,
-      target_price: 74800,
-      historical_average: 78200,
-      currency: 'IDR',
-      potential_savings: 1020000,
-      quantity: 100,
-      unit: 'units',
-      supplier_on_time_rate: 94.5,
-      contract_price: 80000,
-    },
-    precheck: { flag_count: 0, findings: [] },
-    tool_trace: [
-      { tool: 'get_purchase_order', reference_id: 'PO-001', ok: true },
-      { tool: 'get_price_history', reference_id: 'PO-001', ok: true },
-      { tool: 'get_supplier_performance', reference_id: 'SUP-001', ok: true },
-    ],
-    requires_approval: true,
-    approval_id: null,
-    error: null,
-    notice: null,
-  },
-
-  'fraud:PO-002': {
-    status: 'review_required',
-    answer: 'Two indicators require attention on this purchase order. These are flagged for review and do not confirm any wrongdoing. A procurement officer should examine the evidence records and determine next steps.',
-    verified_result: {
-      po_id: 'PO-002',
-      supplier_id: 'SUP-003',
-      scan_scope: 'po',
-      total_invoices_checked: 8,
-      flagged_count: 2,
-    },
-    precheck: {
-      flag_count: 2,
-      findings: [
-        {
-          rule_id: 'DUP-INV-001',
-          severity: 'high',
-          description: 'Duplicate invoice number detected across two records with different amounts.',
-          evidence_record_ids: ['INV-2026-0441', 'INV-2026-0442'],
-          next_action: 'Compare invoice documents and confirm with supplier accounts payable.',
-        },
-        {
-          rule_id: 'BANK-CHG-002',
-          severity: 'medium',
-          description: 'Supplier bank account changed within 14 days before invoice submission.',
-          evidence_record_ids: ['INV-2026-0443'],
-          next_action: 'Verify bank account change through an independent channel (phone call to known contact).',
-        },
-      ],
-    },
-    tool_trace: [
-      { tool: 'get_purchase_order', reference_id: 'PO-002', ok: true },
-      { tool: 'get_supplier_invoices', reference_id: 'SUP-003', ok: true },
-      { tool: 'check_duplicate_invoices', reference_id: 'PO-002', ok: true },
-      { tool: 'check_bank_account_changes', reference_id: 'SUP-003', ok: true },
-    ],
-    requires_approval: true,
-    approval_id: null,
-    error: null,
-    notice: null,
-  },
-
-  'fraud:PO-003': {
-    status: 'no_flags',
-    answer: 'No risk indicators were found for this purchase order. All invoices match expected patterns and no recent bank account changes were detected.',
-    verified_result: {
-      po_id: 'PO-003',
-      supplier_id: 'SUP-002',
-      scan_scope: 'po',
-      total_invoices_checked: 5,
-      flagged_count: 0,
-    },
-    precheck: { flag_count: 0, findings: [] },
-    tool_trace: [
-      { tool: 'get_purchase_order', reference_id: 'PO-003', ok: true },
-      { tool: 'get_supplier_invoices', reference_id: 'SUP-002', ok: true },
-      { tool: 'check_duplicate_invoices', reference_id: 'PO-003', ok: true },
-    ],
-    requires_approval: false,
-    approval_id: null,
-    error: null,
-    notice: null,
-  },
-
-  __error: {
-    status: 'model_unavailable',
-    answer: '',
-    verified_result: null,
-    precheck: null,
-    tool_trace: [],
-    requires_approval: false,
-    approval_id: null,
-    error: 'The AI model is temporarily unavailable. Please try again later.',
-    notice: null,
-  },
-};
-
-const mockAdapter = {
-  async createConversation(task, referenceId) {
-    await delay(150);
-    const id = `mock-conv-${++mockConversationCounter}`;
-    mockTurnCounters[id] = 0;
-    return { id, task, referenceId, sessionId: null };
-  },
-
-  async getMessages(_conversationId) {
-    await delay(100);
-    return [];
-  },
-
-  async sendMessage(conversationId, question, task, referenceId) {
-    await delay(800 + Math.random() * 400);
-    const key = `${task}:${referenceId}`;
-    // Pick scenario: known key, or cycle to error on 4th+ message
-    const turn = (mockTurnCounters[conversationId] ?? 0) + 1;
-    mockTurnCounters[conversationId] = turn;
-
-    let template;
-    if (turn >= 4 && !MOCK_RESPONSES[key]) {
-      template = MOCK_RESPONSES.__error;
-    } else if (MOCK_RESPONSES[key]) {
-      template = MOCK_RESPONSES[key];
-    } else if (task === 'fraud') {
-      template = MOCK_RESPONSES['fraud:PO-003']; // no_flags fallback
-    } else {
-      template = MOCK_RESPONSES['negotiation:PO-001'];
-    }
-
-    // Force error scenario on specific question
-    if (question.toLowerCase().includes('trigger error')) {
-      template = MOCK_RESPONSES.__error;
-    }
-
-    const msgId = `mock-msg-${++mockMessageCounter}`;
-    const approvalId = template.requires_approval ? `mock-approval-${msgId}` : null;
-    if (approvalId) mockApprovalStatuses.set(approvalId, 'pending');
-    return normalize({
-      ...template,
-      id: msgId,
-      approval_id: approvalId,
-      turn_index: turn,
-      created_at: new Date().toISOString(),
-    }, 'assistant');
-  },
-
-  async sendFeedback(_messageId, _rating) {
-    await delay(100);
-    return { ok: true };
-  },
-
-  async approve(approvalId) {
-    await delay(100);
-    if (mockApprovalStatuses.get(approvalId) !== 'pending') {
-      throw new ApiError('This local approval is missing or has already been decided.', 409);
-    }
-    mockApprovalStatuses.set(approvalId, 'approved');
-    return { id: approvalId, status: 'approved' };
-  },
-
-  async reject(approvalId) {
-    await delay(100);
-    if (mockApprovalStatuses.get(approvalId) !== 'pending') {
-      throw new ApiError('This local approval is missing or has already been decided.', 409);
-    }
-    mockApprovalStatuses.set(approvalId, 'rejected');
-    return { id: approvalId, status: 'rejected' };
-  },
-};
-
-// ── Adapter selection ───────────────────────────────────────────────
-const chatMode = import.meta.env.VITE_CHAT_MODE || 'mock';
-export const isMockMode = () => chatMode === 'mock';
-
-function getAdapter(forceMock) {
-  if (forceMock || chatMode === 'mock') return mockAdapter;
-  return liveAdapter;
+const conversations = new Map();
+export async function createChatConversation(task, referenceId) {
+  const id = crypto.randomUUID();
+  conversations.set(id, { task, referenceId, messages: [] });
+  return { id, task, referenceId, sessionId: id };
 }
-
-// ── Public API ──────────────────────────────────────────────────────
-// The `useMock` param lets the UI force mock mode when live returns 501.
-
-export async function createChatConversation(task, referenceId, useMock = false) {
-  return getAdapter(useMock).createConversation(task, referenceId);
+export async function getChatMessages(id) { return conversations.get(id)?.messages ?? []; }
+export async function sendChatMessage(id, question, task, referenceId) {
+  const conversation = conversations.get(id);
+  if (!conversation || conversation.task !== task || conversation.referenceId !== referenceId) throw new ApiError('Agent session context has changed. Start a new chat.', 400);
+  const raw = await chatWithAgent(task, referenceId, id, question);
+  const userMessage = normalize({ id: crypto.randomUUID(), question }, 'user');
+  const assistantMessage = normalize(raw, 'assistant');
+  conversation.messages.push(userMessage, assistantMessage);
+  return assistantMessage;
 }
-
-export async function getChatMessages(conversationId, useMock = false) {
-  return getAdapter(useMock).getMessages(conversationId);
-}
-
-export async function sendChatMessage(conversationId, question, task, referenceId, useMock = false) {
-  // The mock adapter needs task/referenceId to pick a scenario;
-  // the live adapter ignores the extra params.
-  return getAdapter(useMock).sendMessage(conversationId, question, task, referenceId);
-}
-
-export async function sendChatFeedback(messageId, rating, useMock = false) {
-  return getAdapter(useMock).sendFeedback(messageId, rating);
-}
-
-export async function approveChatApproval(approvalId, useMock = false) {
-  return getAdapter(useMock).approve(approvalId);
-}
-
-export async function rejectChatApproval(approvalId, useMock = false) {
-  return getAdapter(useMock).reject(approvalId);
-}
-
+export async function sendChatFeedback() { throw new ApiError('Message feedback is not implemented by Backend yet.', 501); }
+export const approveChatApproval = id => approveApproval(id);
+export const rejectChatApproval = id => rejectApproval(id);
 export { normalize, ApiError };

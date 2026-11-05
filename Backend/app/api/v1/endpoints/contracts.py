@@ -329,3 +329,25 @@ router = register_contracts(
         ),
     ),
 )
+
+# These database-backed routes are implemented in database_records.py. Remove
+# their older 501 contracts so FastAPI publishes the real handlers in OpenAPI.
+_implemented = {
+    ("GET", "/purchase-orders"),
+    ("GET", "/purchase-orders/{id}"),
+    ("GET", "/vendors"),
+    ("GET", "/contracts"),
+    ("GET", "/invoices"),
+    ("GET", "/negotiations"),
+    ("POST", "/negotiations"),
+    ("GET", "/fraud/alerts"),
+    ("GET", "/fraud/alerts/{id}"),
+    ("PATCH", "/fraud/alerts/{id}"),
+    ("POST", "/fraud/alerts/{id}/explain"),
+    ("GET", "/fraud/dashboard"),
+    ("GET", "/audit-logs"),
+}
+router.routes[:] = [
+    route for route in router.routes
+    if not any((method, route.path) in _implemented for method in getattr(route, "methods", set()))
+]

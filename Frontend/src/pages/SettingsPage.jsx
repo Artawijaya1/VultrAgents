@@ -111,7 +111,7 @@ export default function SettingsPage() {
             const SectionIcon = section.icon;
             return <button type="button" key={section.id} className={`settings-nav-item ${activeSection === section.id ? 'active' : ''}`} onClick={() => setActiveSection(section.id)}><SectionIcon size={17} /><span><b>{section.title}</b><small>{section.description}</small></span><ChevronRight size={14} /></button>;
           })}
-          <div className="settings-account-card"><span className="settings-account-avatar">{(account?.email || 'JD').slice(0, 2).toUpperCase()}</span><div><b>{account?.email || 'Jordan Davis'}</b><small>{account?.email ? 'Signed-in account' : 'Demo workspace account'}</small></div></div>
+          <div className="settings-account-card"><span className="settings-account-avatar">{(account?.email || '?').slice(0, 2).toUpperCase()}</span><div><b>{account?.email || 'Not signed in'}</b><small>{account?.email ? 'Signed-in account' : 'No active session'}</small></div></div>
           {account?.email && <button className="settings-signout" type="button" onClick={signOut} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out of this session'}</button>}
         </nav>
 
@@ -122,7 +122,6 @@ export default function SettingsPage() {
             <Field label="Workspace name" hint="Shown in the dashboard workspace switcher."><input value={settings.workspaceName} onChange={event => update('workspaceName', event.target.value)} maxLength={80} required /></Field>
             <Field label="Default currency" hint="Used for display preferences in the workspace."><select value={settings.currency} onChange={event => update('currency', event.target.value)}><option value="USD">USD — US Dollar</option><option value="IDR">IDR — Indonesian Rupiah</option><option value="SGD">SGD — Singapore Dollar</option><option value="EUR">EUR — Euro</option></select></Field>
             <Field label="Workspace timezone" hint="Used when displaying audit timestamps and dates."><select value={settings.timezone} onChange={event => update('timezone', event.target.value)}><option>Asia/Makassar</option><option>Asia/Jakarta</option><option>Asia/Singapore</option><option>UTC</option><option>America/New_York</option><option>Europe/London</option></select></Field>
-            <Field label="Approval review threshold" hint="A display preference for local demo workflows; it does not change Backend approval policy."><div className="settings-input-with-unit"><span>{settings.currency}</span><input type="number" min="0" step="1000" value={settings.approvalThreshold} onChange={event => update('approvalThreshold', event.target.value)} /></div></Field>
           </div>}
 
           {activeSection === 'notifications' && <div className="settings-toggle-list">
@@ -141,7 +140,7 @@ export default function SettingsPage() {
           {activeSection === 'security' && <div className="settings-security-content">
             <div className="settings-security-banner"><span><ShieldCheck size={18} /></span><div><b>Authentication is managed by Supabase</b><small>Role claims and approval permissions are verified by the Backend on every protected request.</small></div></div>
             <Field label="Local session timeout preference" hint="This preference is saved for the workspace UI. It does not override Supabase token expiry."><div className="settings-input-with-unit"><Clock3 size={15} /><select value={settings.sessionTimeout} onChange={event => update('sessionTimeout', event.target.value)}><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="240">4 hours</option></select></div></Field>
-            <div className="settings-security-row"><div><b>Current account</b><small>{account?.email || 'Demo workspace session'}</small></div><span className="settings-verified"><Check size={13} /> Active session</span></div>
+            <div className="settings-security-row"><div><b>Current account</b><small>{account?.email || 'No active session'}</small></div><span className="settings-verified"><Check size={13} /> Active session</span></div>
             <p className="settings-security-footnote">No passwords, API keys, or Supabase role claims are stored on this page.</p>
           </div>}
 

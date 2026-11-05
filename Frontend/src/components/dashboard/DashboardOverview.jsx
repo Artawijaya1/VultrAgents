@@ -1,46 +1,47 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { Activity, ArrowRight, ArrowUpRight, CalendarDays, CircleDollarSign, Download, Handshake, PackageCheck, ShieldAlert, TrendingUp, Users } from 'lucide-react';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { agentActivities, procurementDashboard, transactions } from '../../data/mockData';
-import RecentTransactions from './RecentTransactions';
+import { ArrowRight, CircleDollarSign, ClipboardList, FileText, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 import { useProcurementStore } from '../../services/procurementStore';
-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-const statusClass = (status) => status.toLowerCase().replace(/ /g, '-');
+import { getContracts, getInvoices, getPurchaseOrders, getSuppliers } from '../../services/procurementService';
+
+const currency = (value, code = 'IDR') => new Intl.NumberFormat('en-US', { style: 'currency', currency: code || 'IDR', maximumFractionDigits: 0 }).format(value);
+
 export default function DashboardOverview() {
-    const { search } = useOutletContext();
-    const [range, setRange] = useState('This year');
-    const [rangeOpen, setRangeOpen] = useState(false);
-    const [exported, setExported] = useState(false);
-    const suppliers = useProcurementStore(state => state.suppliers);
-    const orders = useProcurementStore(state => state.purchaseOrders);
-    const invoices = useProcurementStore(state => state.invoices);
-    const demoSpend = suppliers.reduce((sum, supplier) => sum + supplier.spendYtd, 0);
-    const savingsOpportunity = orders.reduce((sum, order) => sum + Math.max(0, order.currentOffer - order.targetPrice) * order.quantity, 0);
-    const reviewInvoices = invoices.filter(invoice => invoice.status === 'Under Review' || invoice.status === 'Flagged').length;
-    const supplierPerformance = suppliers.slice(0, 4).map(supplier => ({ supplier: supplier.name.replace('PT ', '').replace('CV ', ''), score: Math.round(supplier.rating * 20) }));
-    const kpis = [
-        { label: 'Supplier spend YTD', value: money.format(demoSpend), change: '', sub: 'Across demo supplier records', icon: CircleDollarSign, trend: 'up' },
-        { label: 'Active purchase orders', value: String(orders.filter(order => order.status !== 'Received').length), change: '', sub: 'Across linked suppliers', icon: PackageCheck, trend: 'neutral' },
-        { label: 'Potential cost savings', value: money.format(savingsOpportunity), change: '', sub: 'Illustrative target price gap', icon: TrendingUp, trend: 'up' },
-        { label: 'Invoices requiring review', value: String(reviewInvoices), change: '', sub: 'Linked invoice records', icon: ShieldAlert, trend: 'alert' },
-    ];
-    const visibleActivities = useMemo(() => agentActivities.filter(item => `${item.agent} ${item.description} ${item.related} ${item.status}`.toLowerCase().includes(search.toLowerCase())), [search]);
-    const doExport = () => {
-        const rows = [['Transaction ID', 'Supplier', 'Purchase Order', 'Amount', 'Date', 'Status'], ...transactions.map(row => [row.id, row.supplier, row.purchaseOrder, String(row.amount), row.date, row.status])];
-        const blob = new Blob([rows.map(row => row.map(value => `"${value.replace(/"/g, '""')}"`).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = 'procuremind-procurement-report.csv';
-        anchor.click();
-        URL.revokeObjectURL(url);
-        setExported(true);
-        window.setTimeout(() => setExported(false), 2400);
-    };
-    const date = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
-    const rangeLimit = range === 'This month' ? 1 : range === 'This quarter' ? 3 : 12;
-    const displayedSpending = procurementDashboard.monthlySpending.slice(-rangeLimit);
-    return _jsxs("div", { className: "dashboard-overview", children: [_jsxs("div", { className: "overview-heading", children: [_jsxs("div", { children: [_jsxs("div", { className: "dashboard-eyebrow", children: [_jsx("span", { className: "live-dot" }), " PROCUREMENT INTELLIGENCE"] }), _jsx("h1", { children: "Procurement Overview" }), _jsx("p", { children: "Monitor procurement performance and AI-powered insights across your organization." })] }), _jsxs("div", { className: "overview-controls", children: [_jsxs("div", { className: "current-date", children: [_jsx(CalendarDays, { size: 15 }), date] }), _jsxs("div", { className: "range-wrapper", children: [_jsxs("button", { className: "dashboard-control", onClick: () => setRangeOpen(!rangeOpen), children: [_jsx(CalendarDays, { size: 15 }), range, _jsx("span", { className: "down-caret", children: "\u2304" })] }), rangeOpen && _jsx("div", { className: "range-menu", children: ['This month', 'This quarter', 'This year', 'Last 12 months'].map(option => _jsx("button", { className: option === range ? 'chosen' : '', onClick: () => { setRange(option); setRangeOpen(false); }, children: option }, option)) })] }), _jsxs("button", { className: "dashboard-control export-button", onClick: doExport, children: [_jsx(Download, { size: 15 }), exported ? 'Report downloaded' : 'Export report'] })] })] }), _jsxs("div", { className: "demo-banner", children: [_jsx("span", { className: "demo-info", children: "i" }), _jsx("span", { children: "Demo workspace" }), _jsx("span", { className: "banner-separator", children: "\u00B7" }), _jsx("span", { children: "Illustrative procurement data for product preview" })] }), _jsx("section", { className: "kpi-grid-dashboard", "aria-label": "Procurement key performance indicators", children: kpis.map((kpi, index) => _jsxs("article", { className: `dashboard-kpi ${kpi.trend === 'alert' ? 'kpi-alert' : ''}`, children: [_jsxs("div", { className: "kpi-top", children: [_jsx("span", { children: kpi.label }), _jsx("span", { className: "kpi-icon", children: _jsx(kpi.icon, { size: 18 }) })] }), _jsx("div", { className: "kpi-number", children: kpi.value }), _jsxs("div", { className: "kpi-support", children: [kpi.change && _jsxs("span", { className: `kpi-change ${kpi.trend === 'up' ? 'positive' : ''}`, children: [_jsx(ArrowUpRight, { size: 13 }), kpi.change] }), kpi.sub] }), _jsxs("div", { className: `kpi-spark spark-${index}`, children: [_jsx("span", {}), _jsx("span", {}), _jsx("span", {}), _jsx("span", {}), _jsx("span", {}), _jsx("span", {}), _jsx("span", {})] })] }, kpi.label)) }), _jsxs("section", { className: "dashboard-section analytics-section", children: [_jsxs("div", { className: "dashboard-section-heading", children: [_jsxs("div", { children: [_jsx("h2", { children: "Procurement analytics" }), _jsx("p", { children: "Spending patterns and supplier health at a glance" })] }), _jsxs("span", { className: "chart-period", children: [range, " ", _jsx("span", { children: "\u00B7" }), " USD"] })] }), _jsxs("div", { className: "dashboard-chart-grid", children: [_jsxs("article", { className: "dashboard-panel monthly-panel", children: [_jsxs("div", { className: "panel-title-row", children: [_jsxs("div", { children: [_jsx("h3", { children: "Monthly procurement spending" }), _jsx("p", { children: "Spend in thousands (USD)" })] }), _jsxs("span", { className: "panel-legend", children: [_jsx("i", {}), "Spending"] })] }), _jsx("div", { className: "dashboard-chart monthly-chart", children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(AreaChart, { data: displayedSpending, margin: { top: 12, right: 8, bottom: 0, left: -15 }, children: [_jsx("defs", { children: _jsxs("linearGradient", { id: "spendGradient", x1: "0", y1: "0", x2: "0", y2: "1", children: [_jsx("stop", { offset: "0%", stopColor: "#20b9f2", stopOpacity: .25 }), _jsx("stop", { offset: "95%", stopColor: "#20b9f2", stopOpacity: 0 })] }) }), _jsx(CartesianGrid, { stroke: "#1d2b3d", vertical: false }), _jsx(XAxis, { dataKey: "month", tick: { fill: '#8492a6', fontSize: 10 }, axisLine: false, tickLine: false, interval: 0 }), _jsx(YAxis, { tick: { fill: '#76859a', fontSize: 10 }, axisLine: false, tickLine: false, tickFormatter: value => `$${value}k` }), _jsx(Tooltip, { contentStyle: { background: '#101827', border: '1px solid #26364b', borderRadius: 8, color: '#e8f0fa', fontSize: 12 }, formatter: value => [money.format(Number(value) * 1000), 'Spending'] }), _jsx(Area, { type: "monotone", dataKey: "spending", stroke: "#20b9f2", strokeWidth: 2.5, fill: "url(#spendGradient)", activeDot: { r: 4, fill: '#20b9f2', stroke: '#d9f6ff', strokeWidth: 2 } })] }) }) })] }), _jsxs("article", { className: "dashboard-panel category-panel", children: [_jsxs("div", { className: "panel-title-row", children: [_jsxs("div", { children: [_jsx("h3", { children: "Spending by category" }), _jsx("p", { children: "Share of procurement spend" })] }), _jsx("button", { className: "panel-menu", "aria-label": "Category chart details", children: "\u2022\u2022\u2022" })] }), _jsxs("div", { className: "category-chart-wrap", children: [_jsxs("div", { className: "category-chart", children: [_jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(PieChart, { children: [_jsx(Pie, { data: procurementDashboard.categories, dataKey: "value", nameKey: "name", innerRadius: 56, outerRadius: 78, paddingAngle: 3, stroke: "none", children: procurementDashboard.categories.map(item => _jsx(Cell, { fill: item.color }, item.name)) }), _jsx(Tooltip, { contentStyle: { background: '#101827', border: '1px solid #26364b', borderRadius: 8, color: '#e8f0fa', fontSize: 11 }, formatter: value => [`${value}%`, 'Share'] })] }) }), _jsxs("div", { className: "donut-total", children: [_jsx("b", { children: "$2.4M" }), _jsx("small", { children: "Total spend" })] })] }), _jsx("div", { className: "category-legend", children: procurementDashboard.categories.map(item => _jsxs("div", { children: [_jsx("i", { style: { background: item.color } }), _jsx("span", { children: item.name }), _jsxs("b", { children: [item.value, "%"] })] }, item.name)) })] })] })] })] }), _jsxs("div", { className: "dashboard-lower-grid", children: [_jsxs("section", { className: "dashboard-section performance-section", children: [_jsxs("div", { className: "dashboard-section-heading", children: [_jsxs("div", { children: [_jsx("h2", { children: "Supplier performance" }), _jsx("p", { children: "Top suppliers by delivery and quality score" })] }), _jsxs("span", { className: "performance-badge", children: [_jsx(Activity, { size: 13 }), " Demo records"] })] }), _jsxs("article", { className: "dashboard-panel performance-panel", children: [_jsxs("div", { className: "panel-title-row", children: [_jsxs("div", { children: [_jsx("h3", { children: "Supplier score" }), _jsx("p", { children: "Performance index \u00B7 out of 100" })] }), _jsx(Users, { size: 17, className: "muted-icon" })] }), _jsx("div", { className: "supplier-chart", children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", children: _jsxs(BarChart, { data: supplierPerformance, layout: "vertical", margin: { top: 4, right: 12, bottom: 2, left: 4 }, barCategoryGap: "35%", children: [_jsx(XAxis, { type: "number", domain: [0, 100], hide: true }), _jsx(YAxis, { type: "category", dataKey: "supplier", width: 116, tick: { fill: '#a0adbd', fontSize: 10 }, axisLine: false, tickLine: false }), _jsx(Tooltip, { cursor: { fill: '#172338' }, contentStyle: { background: '#101827', border: '1px solid #26364b', borderRadius: 8, color: '#e8f0fa', fontSize: 11 }, formatter: value => [`${value}/100`, 'Score'] }), _jsx(Bar, { dataKey: "score", fill: "#20b9f2", radius: [0, 5, 5, 0], background: { fill: '#1c293a', radius: 5 } })] }) }) })] })] }), _jsxs("section", { className: "dashboard-section activity-section", children: [_jsxs("div", { className: "dashboard-section-heading", children: [_jsxs("div", { children: [_jsx("h2", { children: "AI agents activity" }), _jsx("p", { children: "Recent agent insights for your review" })] }), _jsxs("span", { className: "agents-active", children: [_jsx("i", {}), "2 agents active"] })] }), _jsxs("div", { className: "activity-panel", children: [visibleActivities.length ? visibleActivities.map(item => _jsxs("article", { className: "agent-activity", children: [_jsx("span", { className: `agent-icon ${item.module === 'fraud-detection' ? 'agent-fraud' : ''}`, children: item.icon === 'Handshake' ? _jsx(Handshake, { size: 16 }) : _jsx(ShieldAlert, { size: 16 }) }), _jsxs("div", { className: "activity-copy", children: [_jsxs("div", { className: "activity-title-row", children: [_jsx(Link, { className: "agent-name-link", to: `/${item.module}`, children: item.agent }), _jsx("span", { className: `activity-status ${statusClass(item.status)}`, children: item.status })] }), _jsx("p", { children: item.description }), _jsxs("small", { children: [item.related, " ", _jsx("span", { children: "\u00B7" }), " ", item.timestamp] })] })] }, item.id)) : _jsxs("div", { className: "activity-empty", children: ["No agent activity matches \u201C", search, "\u201D."] }), _jsxs(Link, { className: "dashboard-text-link", to: "/negotiation", children: ["View all agent activity ", _jsx(ArrowRight, { size: 14 })] })] })] })] }), _jsx(RecentTransactions, { search: search })] });
+  const { search = '' } = useOutletContext() ?? {};
+  const orders = useProcurementStore(state => state.purchaseOrders);
+  const suppliers = useProcurementStore(state => state.suppliers);
+  const invoices = useProcurementStore(state => state.invoices);
+  const setRecords = useProcurementStore(state => state.setRecords);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const load = () => {
+    setLoading(true);
+    setError('');
+    setRecords({ purchaseOrders: [], suppliers: [], invoices: [], contracts: [] });
+    Promise.all([getPurchaseOrders(), getSuppliers(), getInvoices(), getContracts()])
+      .then(([purchaseOrders, suppliers, invoices, contracts]) => setRecords({ purchaseOrders, suppliers, invoices, contracts }))
+      .catch(err => setError(err?.message || 'Could not load database records.'))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, []);
+
+  const filteredOrders = useMemo(() => orders.filter(order => `${order.id} ${order.supplierName} ${order.productName} ${order.status}`.toLowerCase().includes(search.toLowerCase())), [orders, search]);
+  const amount = orders.reduce((sum, order) => sum + order.currentOffer * order.quantity, 0);
+  const metrics = [
+    { label: 'Purchase order value', value: currency(amount, orders[0]?.currency), detail: `${orders.length} database purchase orders`, icon: CircleDollarSign },
+    { label: 'Purchase orders', value: String(orders.length), detail: 'Records assigned to your account', icon: ClipboardList },
+    { label: 'Suppliers', value: String(suppliers.length), detail: 'Suppliers linked to your orders', icon: Users },
+    { label: 'Invoices', value: String(invoices.length), detail: 'Invoice rows stored in the database', icon: FileText },
+  ];
+
+  return <div className="dashboard-overview">
+    <div className="overview-heading"><div><div className="dashboard-eyebrow"><span className="live-dot" /> DATABASE CONNECTED</div><h1>Procurement Overview</h1><p>Current procurement records from your Backend database.</p></div><div className="overview-controls"><button className="dashboard-control export-button" onClick={load}><RefreshCw size={15} /> Refresh records</button></div></div>
+    {error && <div className="fraud-page-error" role="alert"><span>{error}</span><button onClick={load}>Retry</button></div>}
+    <section className="kpi-grid-dashboard" aria-label="Database procurement metrics">{metrics.map(({ label, value, detail, icon: Icon }) => <article className="dashboard-kpi" key={label}><div className="kpi-top"><span>{label}</span><span className="kpi-icon"><Icon size={18} /></span></div><div className="kpi-number">{loading ? '—' : value}</div><div className="kpi-support">{detail}</div></article>)}</section>
+    <section className="dashboard-section"><div className="dashboard-section-heading"><div><h2>Purchase orders</h2><p>Most recently updated database records</p></div><Link to="/dashboard/purchase-orders">View all <ArrowRight size={14} /></Link></div>
+      <div className="proc-table-card"><div className="proc-table-scroll"><table><thead><tr><th>PO</th><th>SUPPLIER</th><th>PRODUCT</th><th>QUANTITY</th><th>UNIT OFFER</th><th>STATUS</th></tr></thead><tbody>{filteredOrders.slice(0, 8).map(order => <tr key={order.id}><td>{order.id}</td><td>{order.supplierName || order.supplierId}</td><td>{order.productName}</td><td>{order.quantity}</td><td>{currency(order.currentOffer, order.currency)}</td><td>{order.status}</td></tr>)}{!filteredOrders.length && <tr><td colSpan="6" className="proc-empty">{loading ? 'Loading database records…' : error ? 'Records are unavailable while Backend is unreachable.' : 'No purchase orders are assigned to this account yet.'}</td></tr>}</tbody></table></div></div>
+    </section>
+    <section className="dashboard-section"><div className="dashboard-section-heading"><div><h2>Administration</h2><p>Review recorded changes and workspace preferences.</p></div></div><div className="dashboard-panel"><ShieldCheck size={18} /><span>Audit entries are retrieved from Backend database activity.</span><Link to="/dashboard/audit-logs">Open audit logs <ArrowRight size={14} /></Link></div></section>
+  </div>;
 }

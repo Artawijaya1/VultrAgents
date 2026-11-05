@@ -5,7 +5,6 @@ import ContextBar from '../components/chat/ContextBar';
 import MessageList from '../components/chat/MessageList';
 import Composer from '../components/chat/Composer';
 import {
-  isMockMode,
   createChatConversation,
   sendChatMessage,
   approveChatApproval,
@@ -26,7 +25,6 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [approvalPendingId, setApprovalPendingId] = useState(null);
-  const [useMock, setUseMock] = useState(isMockMode());
 
   // Error / banner state
   const [banner, setBanner] = useState('');
@@ -43,7 +41,7 @@ export default function ChatPage() {
         return;
       }
       if (err.status === 404 && err.message?.toLowerCase().includes('purchase order')) {
-        setInlineError('Purchase order not found. Use a PO stored in Backend and assigned to your account. For the demo, set up AGENT-DEMO-PO-001 in Backend first.');
+        setInlineError('Purchase order not found. Use a PO stored in Backend and assigned to your account.');
         return;
       }
       if (err.status === 501) {
@@ -64,8 +62,6 @@ export default function ChatPage() {
     setInlineError(err?.message || 'An unexpected error occurred.');
   }, [navigate]);
 
-  const switchToMock = () => { setUseMock(true); clearBanner(); };
-
   // Start or restart conversation
   const handleStart = useCallback(async (newTask, newRef) => {
     setTask(newTask);
@@ -77,14 +73,14 @@ export default function ChatPage() {
     setInlineError('');
     setLoading(true);
     try {
-      const conv = await createChatConversation(newTask, newRef, useMock);
+      const conv = await createChatConversation(newTask, newRef);
       setConversationId(conv.id);
     } catch (err) {
       handleError(err);
     } finally {
       setLoading(false);
     }
-  }, [useMock, handleError]);
+  }, [handleError]);
 
   // Send message
   const handleSend = useCallback(async (questionText) => {
@@ -114,7 +110,7 @@ export default function ChatPage() {
     let cid = conversationId;
     if (!cid) {
       try {
-        const conv = await createChatConversation(task, referenceId, useMock);
+        const conv = await createChatConversation(task, referenceId);
         cid = conv.id;
         setConversationId(cid);
       } catch (err) {
@@ -125,7 +121,7 @@ export default function ChatPage() {
     }
 
     try {
-      const assistantMsg = await sendChatMessage(cid, questionText, task, referenceId, useMock);
+      const assistantMsg = await sendChatMessage(cid, questionText, task, referenceId);
       setMessages(prev => [...prev, assistantMsg]);
       recordAuditEvent({ category: 'Agent', action: 'Agent chat response received', entityType: 'Purchase order', entityId: referenceId, outcome: assistantMsg.status || 'Completed', summary: `Agent chat handled a ${task} request for ${referenceId}.`, details: { task, sessionId: cid } });
     } catch (err) {
@@ -133,15 +129,15 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
-  }, [conversationId, task, referenceId, useMock, handleError]);
+  }, [conversationId, task, referenceId, handleError]);
 
   const decideApproval = useCallback(async (approvalId, decision) => {
     setApprovalPendingId(approvalId);
     setInlineError('');
     try {
       const result = decision === 'approved'
-        ? await approveChatApproval(approvalId, useMock)
-        : await rejectChatApproval(approvalId, useMock);
+        ? await approveChatApproval(approvalId)
+        : await rejectChatApproval(approvalId);
       const status = result?.status || decision;
       setMessages(current => current.map(message => message.approvalId === approvalId
         ? { ...message, approvalStatus: status }
@@ -152,7 +148,7 @@ export default function ChatPage() {
     } finally {
       setApprovalPendingId(null);
     }
-  }, [useMock, handleError]);
+  }, [handleError]);
 
   const handleApprove = useCallback(approvalId => decideApproval(approvalId, 'approved'), [decideApproval]);
   const handleReject = useCallback(approvalId => decideApproval(approvalId, 'rejected'), [decideApproval]);
@@ -178,21 +174,9 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {useMock && (
-        <div className="chat-demo-banner">
-          <span className="demo-info">i</span>
-          <span>Simulated data</span>
-          <span className="banner-separator">&middot;</span>
-          <span>Running in mock mode. Responses use local demonstration data.</span>
-        </div>
-      )}
-
       {banner && (
         <div className={`chat-banner chat-banner-${bannerType}`}>
           <span>{banner}</span>
-          {bannerType === '501' && !isMockMode() && (
-            <button className="chat-btn chat-btn-small" onClick={switchToMock}>Switch to mock mode</button>
-          )}
           {bannerType === 'network' && (
             <button className="chat-btn chat-btn-small" onClick={clearBanner}><RefreshCw size={13} /> Dismiss</button>
           )}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Activity, CalendarDays, ChevronDown, Download, FileSearch, Filter, Search, ShieldCheck, X } from 'lucide-react';
-import { getAuditEvents, subscribeToAuditEvents } from '../services/auditLogService';
+import { getAuditEvents, refreshAuditEvents, subscribeToAuditEvents } from '../services/auditLogService';
 import { getWorkspaceSettings } from '../services/workspaceSettingsService';
 import './governance-pages.css';
 
@@ -38,13 +38,19 @@ function Metric({ icon: Icon, label, value, note }) {
 export default function AuditLogsPage() {
   const outlet = useOutletContext() ?? {};
   const [events, setEvents] = useState(() => getAuditEvents());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All events');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [selected, setSelected] = useState(null);
 
-  useEffect(() => subscribeToAuditEvents(() => setEvents(getAuditEvents())), []);
+  useEffect(() => {
+    const unsubscribe = subscribeToAuditEvents(() => setEvents(getAuditEvents()));
+    refreshAuditEvents().then(setEvents).catch(err => setError(err?.message || 'Could not load audit logs from Backend.')).finally(() => setLoading(false));
+    return unsubscribe;
+  }, []);
 
   const filtered = useMemo(() => {
     const searchTerm = `${query} ${outlet.search || ''}`.trim().toLowerCase();
@@ -75,7 +81,7 @@ export default function AuditLogsPage() {
         <button className="gov-button gov-button-primary" onClick={() => exportCsv(filtered)} disabled={!filtered.length}><Download size={15} /> Export CSV</button>
       </header>
 
-      <div className="gov-demo-note"><ShieldCheck size={15} /><span>Local workspace activity is stored in this browser. Seeded entries are marked as demonstration records.</span></div>
+      {error && <div className="gov-demo-note" role="alert"><ShieldCheck size={15} /><span>{error}</span><button className="gov-button gov-button-quiet" onClick={() => { setLoading(true); setError(''); refreshAuditEvents().then(setEvents).catch(err => setError(err?.message || 'Could not load audit logs from Backend.')).finally(() => setLoading(false)); }}>Retry</button></div>}
 
       <section className="gov-metric-grid" aria-label="Audit log summary">
         <Metric icon={Activity} label="TOTAL EVENTS" value={events.length.toLocaleString()} note="Available in this workspace" />
@@ -103,7 +109,7 @@ export default function AuditLogsPage() {
             <tbody>
               {filtered.map(event => (
                 <tr key={event.id} tabIndex={0} onClick={() => setSelected(event)} onKeyDown={key => { if (key.key === 'Enter' || key.key === ' ') { key.preventDefault(); setSelected(event); } }}>
-                  <td><div className="audit-event-cell"><span className={`audit-category-mark ${event.category.toLowerCase()}`}><Activity size={14} /></span><div><b>{event.action}</b><small>{event.category}{event.demo ? ' · Demo record' : ''}</small></div></div></td>
+                  <td><div className="audit-event-cell"><span className={`audit-category-mark ${event.category.toLowerCase()}`}><Activity size={14} /></span><div><b>{event.action}</b><small>{event.category}</small></div></div></td>
                   <td><b className="audit-entity">{event.entityId || 'Workspace'}</b><small className="audit-entity-type">{event.entityType || 'Workspace'}</small></td>
                   <td><span className="audit-actor"><i>{String(event.actor || '?').slice(0, 1).toUpperCase()}</i>{event.actor || 'System'}</span></td>
                   <td className="audit-time">{formatDate(event.timestamp || event.date)}</td>
@@ -111,7 +117,7 @@ export default function AuditLogsPage() {
                   <td><button className="audit-open" aria-label={`View details for ${event.action}`} onClick={click => { click.stopPropagation(); setSelected(event); }}>View</button></td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td className="audit-empty" colSpan="6"><Search size={18} /><b>No events match those filters.</b><span>Try a different search or clear the date range.</span></td></tr>}
+              {!filtered.length && <tr><td className="audit-empty" colSpan="6"><Search size={18} /><b>{loading ? 'Loading audit events…' : error ? 'Audit events are unavailable.' : 'No database audit events yet.'}</b><span>{loading ? 'Reading records from Backend.' : error ? 'Retry after checking the API connection.' : 'Backend will show activity as database actions are recorded.'}</span></td></tr>}
             </tbody>
           </table>
         </div>
@@ -133,7 +139,6 @@ export default function AuditLogsPage() {
             <div><dt>Outcome</dt><dd>{selected.outcome || 'Recorded'}</dd></div>
             {selected.details && Object.entries(selected.details).map(([key, value]) => <div key={key}><dt>{key.replaceAll(/([A-Z])/g, ' $1')}</dt><dd>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd></div>)}
           </dl>
-          {selected.demo && <div className="gov-demo-note"><ShieldCheck size={14} /><span>This is a seeded demonstration entry, not a live procurement record.</span></div>}
         </aside>
       </div>}
     </main>
