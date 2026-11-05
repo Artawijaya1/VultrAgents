@@ -19,12 +19,19 @@ from app.db.session import get_db
 from app.main import app
 from app.models import Base
 from app.schemas.token import SupabaseIdentity
+from app.core.config import get_settings
 
 ADMIN_IDENTITY = SupabaseIdentity(
     id="4c9727a8-9194-4c93-a94c-2ca3fd2e0243",
     email="admin@example.com",
     app_metadata={"role": "admin"},
 )
+
+os.environ["DATABASE_URL"] = "postgresql+psycopg://test:test@localhost:5432/test"
+os.environ["SUPABASE_URL"] = "https://supabase.test"
+os.environ["SUPABASE_ANON_KEY"] = "test-anon-key"
+os.environ["INTERNAL_API_KEY"] = "test-internal-api-key"
+get_settings.cache_clear()
 
 
 @pytest.fixture

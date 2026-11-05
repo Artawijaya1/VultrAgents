@@ -1,6 +1,7 @@
 import httpx
 
 from app.api.deps import get_current_identity
+from app.core.config import Settings
 from app.main import app
 from app.schemas.token import SupabaseIdentity
 
@@ -75,6 +76,14 @@ def test_supabase_rejects_invalid_access_token(client, monkeypatch):
 
 
 def test_login_proxies_credentials_to_supabase(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.supabase_auth.get_settings",
+        lambda: Settings(
+            supabase_url="https://supabase.test",
+            supabase_anon_key="test-anon-key",
+        ),
+    )
+
     def login_response(method, url, *, headers, json, timeout):
         assert method == "POST"
         assert url.endswith("/auth/v1/token?grant_type=password")
@@ -105,6 +114,40 @@ def test_login_proxies_credentials_to_supabase(client, monkeypatch):
     assert response.status_code == 200
     assert response.json()["access_token"] == "access"
     assert response.json()["refresh_token"] == "refresh"
+
+
+def test_login_maps_supabase_server_error_to_service_unavailable(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.supabase_auth.httpx.request",
+        lambda *args, **kwargs: httpx.Response(500, json={"message": "upstream failure"}),
+    )
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "not-a-real-password"},
+    )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Supabase authentication service is unavailable."
+    }
+
+
+def test_login_maps_malformed_supabase_success_to_bad_gateway(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.supabase_auth.httpx.request",
+        lambda *args, **kwargs: httpx.Response(200, json={"access_token": "missing-user"}),
+    )
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "not-a-real-password"},
+    )
+
+    assert response.status_code == 502
+    assert response.json() == {
+        "detail": "Supabase authentication returned an invalid response."
+    }
 
 
 def test_openapi_exposes_live_auth_routes_with_bearer_security(client):

@@ -1,4 +1,5 @@
 import httpx
+from pydantic import ValidationError
 from fastapi import HTTPException, status
 
 from app.core.config import get_settings
@@ -59,6 +60,16 @@ def _raise_auth_error(response: httpx.Response) -> None:
     )
 
 
+def _parse_auth_session(response: httpx.Response) -> AuthSession:
+    try:
+        return AuthSession.model_validate(response.json())
+    except (ValueError, ValidationError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Supabase authentication returned an invalid response.",
+        ) from exc
+
+
 def login(email: str, password: str) -> AuthSession:
     response = _supabase_request(
         "POST",
@@ -67,7 +78,7 @@ def login(email: str, password: str) -> AuthSession:
     )
     if not response.is_success:
         _raise_auth_error(response)
-    return AuthSession.model_validate(response.json())
+    return _parse_auth_session(response)
 
 
 def refresh_session(refresh_token: str) -> AuthSession:
@@ -78,7 +89,7 @@ def refresh_session(refresh_token: str) -> AuthSession:
     )
     if not response.is_success:
         _raise_auth_error(response)
-    return AuthSession.model_validate(response.json())
+    return _parse_auth_session(response)
 
 
 def get_supabase_user(access_token: str) -> dict[str, object]:
