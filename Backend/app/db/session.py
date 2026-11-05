@@ -7,10 +7,19 @@ from app.core.config import get_settings
 
 engine = create_engine(
     get_settings().sqlalchemy_database_url,
+    pool_size=3,
+    max_overflow=2,
+    pool_timeout=30,
+    pool_recycle=1800,
     pool_pre_ping=True,
     connect_args={"prepare_threshold": None},
 )
-SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    expire_on_commit=False,
+)
 
 
 def get_db() -> Generator[Session, None, None]:
