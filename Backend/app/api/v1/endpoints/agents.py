@@ -111,6 +111,8 @@ async def run_agent(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     _require_reference_access(db, user, request.reference_type, request.reference_id)
+    # Release the read connection before the potentially long Agent request.
+    db.commit()
     request_id = str(uuid4())
     payload = request.model_dump()
     payload["request_id"] = request_id
@@ -167,6 +169,8 @@ async def chat_agent(
         ):
             raise HTTPException(status_code=403, detail="Agent session access is denied.")
 
+    # Keep database connections available while waiting on the Agent service.
+    db.commit()
     payload = request.model_dump()
     payload["session_id"] = session_id
     try:

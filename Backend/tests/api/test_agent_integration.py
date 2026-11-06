@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 from sqlalchemy import select
 
 from app.core.config import Settings
+from app.db.session import get_db
 from app.models.procurement import (
     AgentRun,
     AgentSession,
@@ -153,7 +154,17 @@ def test_negotiation_analysis_rejects_nonpositive_target_price(
 
 def test_agent_run_persists_approval_and_audit(client, test_session_factory, monkeypatch):
     _seed_procurement(test_session_factory)
+    db_sessions = []
+
+    def capture_db_session():
+        with test_session_factory() as db:
+            db_sessions.append(db)
+            yield db
+
+    client.app.dependency_overrides[get_db] = capture_db_session
+
     async def fake_agent_call(endpoint, payload, timeout):
+        assert db_sessions[-1].in_transaction() is False
         return {
             "request_id": payload["request_id"],
             "task": "negotiation",
@@ -296,7 +307,17 @@ def test_agent_chat_persists_user_scoped_session(
     client, test_session_factory, monkeypatch
 ):
     _, po_id = _seed_procurement(test_session_factory)
+    db_sessions = []
+
+    def capture_db_session():
+        with test_session_factory() as db:
+            db_sessions.append(db)
+            yield db
+
+    client.app.dependency_overrides[get_db] = capture_db_session
+
     async def fake_agent_call(endpoint, payload, timeout):
+        assert db_sessions[-1].in_transaction() is False
         return {
             "session_id": payload["session_id"],
             "task": "negotiation",
