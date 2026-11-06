@@ -11,6 +11,9 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(r['status'],'draft')
         self.assertLessEqual(r['opening_offer_unit'],r['budget_ceiling_unit'])
         self.assertTrue(r['requires_approval'])
+        self.assertIn('Please consider an offer', r['draft_message'])
+        self.assertIn('not been sent to the supplier', r['disclaimer'])
+        self.assertTrue(all(option['reason'].isascii() for option in r['options']))
 
     def test_negotiation_no_po(self):
         self.assertEqual(execute_agent('negotiation','NONE',self.data)['status'],'not_found')
@@ -19,6 +22,12 @@ class AgentTests(unittest.TestCase):
         r = execute_agent('fraud','SUP-001',self.data)
         self.assertIn('DUPLICATE_INVOICE',[x['rule_id'] for x in r['findings']])
         self.assertFalse(r['is_fraud_confirmed'])
+        self.assertIn('not proof', r['disclaimer'])
+        self.assertTrue(all(
+            finding['description'].isascii()
+            and finding['next_action'].isascii()
+            for finding in r['findings']
+        ))
 
     def test_fraud_recent_bank_change(self):
         r = execute_agent('fraud','SUP-001',self.data)

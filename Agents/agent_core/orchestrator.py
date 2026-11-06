@@ -10,4 +10,4 @@ def execute_agent(task: str, reference_id: str, provider: ProcurementProvider | 
         return recommend_negotiation(provider, reference_id)
     if task == 'fraud':
         return analyze_supplier(provider, reference_id)
-    return {'status': 'invalid_task', 'error': 'Gunakan negotiation atau fraud'}
+    return {'status': 'invalid_task', 'error': 'Use negotiation or fraud as the task.'}

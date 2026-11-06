@@ -10,7 +10,7 @@ provider = MockProvider()  # Replace with team's adapter after agreeing schema
 @mcp.tool()
 def get_purchase_order(po_id: str) -> dict:
     """Get a purchase order from the demo procurement data (read only)."""
-    return provider.get_po(po_id) or {'error': 'PO tidak ditemukan'}
+    return provider.get_po(po_id) or {'error': 'Purchase order not found.'}
 
 @mcp.tool()
 def recommend_price_negotiation(po_id: str) -> dict:

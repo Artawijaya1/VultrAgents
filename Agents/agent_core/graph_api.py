@@ -48,7 +48,7 @@ class AgentResponse(BaseModel):
 def authorized(authorization: str | None = Header(default=None)) -> None:
     expected = os.getenv('AGENT_API_KEY', '')
     if not expected:
-        raise HTTPException(status_code=503, detail='AGENT_API_KEY belum dikonfigurasi')
+        raise HTTPException(status_code=503, detail='AGENT_API_KEY is not configured.')
     prefix = 'Bearer '
     if not authorization or not authorization.startswith(prefix):
         raise HTTPException(status_code=401, detail='Unauthorized')
@@ -75,7 +75,7 @@ async def run_agent(request: AgentRequest):
         raise HTTPException(status_code=504, detail='Agent timeout')
     except Exception:
         # Never leak backend URLs, credentials, or internal stack traces to API callers.
-        raise HTTPException(status_code=502, detail='Agent gagal memanggil sumber data atau MCP tool')
+        raise HTTPException(status_code=502, detail='The Agent could not call the data source or MCP tool.')
 
 
 # PROCUREGUARD_STAGE6_CHAT_API
@@ -115,4 +115,4 @@ async def chat_agent(request: AgentChatRequest):
     except TimeoutError:
         raise HTTPException(status_code=504, detail='Agent conversation timeout')
     except Exception:
-        raise HTTPException(status_code=502, detail='Gagal memproses percakapan Agent')
+        raise HTTPException(status_code=502, detail='The Agent could not process the conversation.')

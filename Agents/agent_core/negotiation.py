@@ -6,7 +6,7 @@ from .data_provider import ProcurementProvider
 def recommend_negotiation(provider: ProcurementProvider, po_id: str) -> dict:
     po = provider.get_po(po_id)
     if po is None:
-        return {'status': 'not_found', 'po_id': po_id, 'error': 'PO tidak ditemukan'}
+        return {'status': 'not_found', 'po_id': po_id, 'error': 'Purchase order not found.'}
     price = Decimal(str(po['offered_unit_price']))
     ceiling = Decimal(str(po['budget_ceiling_unit']))
     previous = Decimal(str(po['previous_unit_price']))
@@ -19,19 +19,19 @@ def recommend_negotiation(provider: ProcurementProvider, po_id: str) -> dict:
                 or quantity_value != quantity_value.to_integral_value()
                 or quantity_value > Decimal('99999999999999')):
             return {'status': 'invalid_data', 'po_id': po_id,
-                    'error': 'Quantity harus bilangan bulat positif yang valid'}
+                    'error': 'Quantity must be a valid positive integer.'}
         quantity = int(quantity_value)
     except (ValueError, TypeError, ArithmeticError):
         return {'status': 'invalid_data', 'po_id': po_id,
-                'error': 'Quantity harus bilangan bulat positif yang valid'}
+                'error': 'Quantity must be a valid positive integer.'}
     if min(price, ceiling, previous) <= 0 or quantity <= 0:
-        return {'status': 'invalid_data', 'po_id': po_id, 'error': 'Harga/jumlah tidak valid'}
+        return {'status': 'invalid_data', 'po_id': po_id, 'error': 'Price or quantity is invalid.'}
     opening = (min(ceiling * Decimal('0.97'), previous * Decimal('0.95')) / 1000).to_integral_value(rounding=ROUND_DOWN) * 1000
     opening = min(opening, ceiling)
     options = [
-        {'option': 'discount', 'proposal_unit_price': int(opening), 'reason': 'Penawaran awal di bawah batas anggaran'},
-        {'option': 'volume_or_terms', 'proposal_unit_price': int(ceiling), 'reason': 'Minta diskon/layanan tambahan tanpa melewati batas unit'},
-        {'option': 'escalate', 'proposal_unit_price': None, 'reason': 'Bila supplier menolak, minta keputusan manusia atau evaluasi pemasok alternatif'},
+        {'option': 'discount', 'proposal_unit_price': int(opening), 'reason': 'Opening offer below the budget ceiling.'},
+        {'option': 'volume_or_terms', 'proposal_unit_price': int(ceiling), 'reason': 'Request a discount or additional services without exceeding the unit-price ceiling.'},
+        {'option': 'escalate', 'proposal_unit_price': None, 'reason': 'If the supplier declines, request a human decision or evaluate alternative suppliers.'},
     ]
     return {
         'status': 'draft', 'agent': 'negotiation', 'po_id': po_id,
@@ -40,7 +40,10 @@ def recommend_negotiation(provider: ProcurementProvider, po_id: str) -> dict:
         'quantity': quantity, 'opening_offer_unit': int(opening),
         'potential_savings_vs_offer': int((price - opening) * quantity),
         'options': options, 'requires_approval': True,
-        'draft_message': f"Mohon pertimbangan penawaran Rp{int(opening):,} per unit untuk PO {po_id}. Apakah terdapat opsi diskon atau termin yang dapat membantu?".replace(',', '.'),
+        'draft_message': (
+            f"Please consider an offer of {po['currency']} {int(opening):,} per unit "
+            f"for PO {po_id}. Are there any discounts or payment terms that could help?"
+        ),
         'evidence': {'po_id': po_id, 'supplier_id': po['supplier_id']},
-        'disclaimer': 'Saran awal berbasis aturan dan data simulasi; belum dikirim ke supplier.'
+        'disclaimer': 'This is an initial rule-based recommendation; it has not been sent to the supplier.'
     }

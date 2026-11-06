@@ -13,7 +13,7 @@ def analyze_purchase_order(provider: ProcurementProvider, po_id: str) -> dict:
     if po is None:
         return {
             'status': 'not_found', 'agent': 'fraud', 'scope': 'purchase_order',
-            'po_id': po_id, 'error': 'Purchase Order tidak ditemukan',
+            'po_id': po_id, 'error': 'Purchase order not found.',
             'is_fraud_confirmed': False,
         }
 
@@ -28,7 +28,7 @@ def analyze_purchase_order(provider: ProcurementProvider, po_id: str) -> dict:
             'po_id': po_id, 'supplier_id': supplier_id, 'invoice_count': 0,
             'findings': [], 'flag_count': 0, 'is_fraud_confirmed': False,
             'requires_human_review': False,
-            'disclaimer': 'Belum ada invoice untuk diperiksa; bukan bukti bebas risiko.',
+            'disclaimer': 'There are no invoices to review; this does not prove that there is no risk.',
         }
 
     supplier_scan = analyze_supplier(provider, supplier_id)
@@ -36,7 +36,8 @@ def analyze_purchase_order(provider: ProcurementProvider, po_id: str) -> dict:
         return {
             'status': 'invalid_reference', 'agent': 'fraud', 'scope': 'purchase_order',
             'po_id': po_id, 'supplier_id': supplier_id,
-            'error': 'Supplier pada PO tidak ditemukan', 'is_fraud_confirmed': False,
+            'error': 'The supplier associated with the purchase order was not found.',
+            'is_fraud_confirmed': False,
         }
 
     # Include a finding only if at least one evidence record belongs to this PO.
@@ -53,5 +54,5 @@ def analyze_purchase_order(provider: ProcurementProvider, po_id: str) -> dict:
         'findings': findings, 'flag_count': len(findings),
         'is_fraud_confirmed': False,
         'requires_human_review': bool(findings),
-        'disclaimer': 'Indikator anomali, bukan bukti atau vonis penipuan.',
+        'disclaimer': 'Anomaly indicators are not proof or a determination of fraud.',
     }

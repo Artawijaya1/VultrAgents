@@ -16,13 +16,13 @@ def provider():
 @mcp.tool()
 def get_purchase_order(po_id: str) -> dict:
     """Read one purchase order; immutable, authorized provider data only."""
-    return provider().get_po(po_id) or {'error': 'PO tidak ditemukan', 'status': 'not_found'}
+    return provider().get_po(po_id) or {'error': 'Purchase order not found.', 'status': 'not_found'}
 
 
 @mcp.tool()
 def get_supplier_profile(supplier_id: str) -> dict:
     """Read supplier profile for context and risk precheck."""
-    return provider().get_supplier(supplier_id) or {'error': 'Supplier tidak ditemukan', 'status': 'not_found'}
+    return provider().get_supplier(supplier_id) or {'error': 'Supplier not found.', 'status': 'not_found'}
 
 
 @mcp.tool()

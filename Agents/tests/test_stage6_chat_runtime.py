@@ -32,7 +32,10 @@ class FakeCompletions:
                 },
             )
         else:
-            msg = SimpleNamespace(tool_calls=[], content='Saran awal; perlu persetujuan manusia.')
+            msg = SimpleNamespace(
+                tool_calls=[],
+                content='The initial recommendation requires human approval.',
+            )
         return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 
 
@@ -53,6 +56,15 @@ class EnhancedChatRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['verified_result']['opening_offer_unit'], 130000)
         self.assertEqual(result['precheck']['scope'], 'purchase_order')
         self.assertTrue(result['requires_approval'])
+        self.assertEqual(
+            result['answer'],
+            'The initial recommendation requires human approval.',
+        )
+        self.assertIn('Human approval is required.', result['notice'])
+        self.assertIn(
+            'Always respond in English',
+            fake.spy.calls[0]['messages'][0]['content'],
+        )
         self.assertIn('scan_purchase_order_anomalies', [x['tool'] for x in result['tool_trace']])
         self.assertIn('recommend_price_negotiation', [x['tool'] for x in result['tool_trace']])
 
@@ -93,6 +105,10 @@ class EnhancedChatRuntimeTests(unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ, env, clear=True):
             result = await run_chat('negotiation', 'PO-001', 'Coba tanpa kunci', str(uuid4()))
         self.assertEqual(result['status'], 'not_configured')
+        self.assertEqual(
+            result['error'],
+            'LLM_API_KEY and LLM_MODEL are not configured.',
+        )
         self.assertIsNone(result['verified_result'])
 
 

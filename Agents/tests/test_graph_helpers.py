@@ -23,7 +23,7 @@ class HelpersTest(unittest.TestCase):
         self.assertIn('error', normalize_mcp_result(r))
     def test_summary_warns_on_precheck(self):
         s = build_summary('negotiation', {'opening_offer_unit': 100, 'currency': 'IDR'}, {'flag_count': 1})
-        self.assertIn('risiko', s)
+        self.assertIn('risk indicators', s)
 
 
 if __name__ == '__main__':

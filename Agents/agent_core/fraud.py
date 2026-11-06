@@ -8,7 +8,7 @@ from .data_provider import ProcurementProvider
 def analyze_supplier(provider: ProcurementProvider, supplier_id: str) -> dict:
     supplier = provider.get_supplier(supplier_id)
     if supplier is None:
-        return {'status': 'not_found', 'supplier_id': supplier_id, 'error': 'Supplier tidak ditemukan'}
+        return {'status': 'not_found', 'supplier_id': supplier_id, 'error': 'Supplier not found.'}
     invoices = provider.get_invoices(supplier_id)
     findings: list[dict] = []
     seen = defaultdict(list)
@@ -18,9 +18,9 @@ def analyze_supplier(provider: ProcurementProvider, supplier_id: str) -> dict:
         if len({x['record_id'] for x in matches}) > 1:
             findings.append({
                 'rule_id': 'DUPLICATE_INVOICE', 'severity': 'high',
-                'description': f'Nomor invoice {number} tercatat lebih dari sekali',
+                'description': f'Invoice number {number} is recorded more than once.',
                 'evidence_record_ids': [x['record_id'] for x in matches],
-                'next_action': 'Verifikasi dokumen dan status pembayaran secara manual'
+                'next_action': 'Manually verify the documents and payment status.'
             })
     for inv in invoices:
         po = provider.get_po(inv['po_id'])
@@ -30,9 +30,9 @@ def analyze_supplier(provider: ProcurementProvider, supplier_id: str) -> dict:
             if baseline > 0 and current > baseline * Decimal('1.25'):
                 findings.append({
                     'rule_id': 'PRICE_ANOMALY', 'severity': 'medium',
-                    'description': 'Harga invoice melampaui 125% harga historis',
+                    'description': 'The invoice price exceeds 125% of the historical price.',
                     'evidence_record_ids': [inv['record_id']],
-                    'next_action': 'Periksa alasan kenaikan harga dan kontrak'
+                    'next_action': 'Review the reason for the price increase and the contract.'
                 })
         changed = supplier.get('bank_last_changed_at')
         if changed:
@@ -41,15 +41,15 @@ def analyze_supplier(provider: ProcurementProvider, supplier_id: str) -> dict:
                 if 0 <= delta <= 7:
                     findings.append({
                         'rule_id': 'RECENT_BANK_CHANGE', 'severity': 'high',
-                        'description': 'Ada perubahan rekening dalam 7 hari sebelum tanggal invoice',
+                        'description': 'A bank-account change occurred within 7 days before the invoice date.',
                         'evidence_record_ids': [inv['record_id']],
-                        'next_action': 'Konfirmasi perubahan rekening melalui kanal independen'
+                        'next_action': 'Confirm the bank-account change through an independent channel.'
                     })
             except ValueError:
                 findings.append({'rule_id':'INVALID_DATE','severity':'low',
-                    'description':'Tanggal transaksi tidak dapat dibaca',
+                    'description':'The transaction date could not be read.',
                     'evidence_record_ids':[inv['record_id']],
-                    'next_action':'Periksa kualitas data'})
+                    'next_action':'Review the data quality.'})
     # A finding is a lead for review, never proof of fraud.
     return {
         'status': 'review_required' if findings else 'no_flags',
@@ -57,5 +57,5 @@ def analyze_supplier(provider: ProcurementProvider, supplier_id: str) -> dict:
         'invoice_count': len(invoices), 'findings': findings,
         'flag_count': len(findings), 'is_fraud_confirmed': False,
         'requires_human_review': bool(findings),
-        'disclaimer': 'Indikator anomali, bukan bukti atau vonis penipuan.'
+        'disclaimer': 'Anomaly indicators are not proof or a determination of fraud.'
     }
