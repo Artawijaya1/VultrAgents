@@ -1,0 +1,74 @@
+/* ProcureMind data typography: consistent with the existing Inter / Space Grotesk visual language.
+   Display-only. API IDs and underlying data are never modified. */
+.dashboard-app :is(.procurement-page, .dashboard-overview) {
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  font-variant-numeric: lining-nums;
+  -webkit-font-smoothing: antialiased;
+}
+.dashboard-app :is(.procurement-page, .dashboard-overview) :is(h1, h2, h3) {
+  font-family: 'Space Grotesk', Inter, 'Segoe UI', sans-serif;
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+.dashboard-app :is(.procurement-page, .dashboard-overview) :is(.proc-table th, .proc-table td, .proc-table button, .proc-table select) {
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.006em;
+}
+.dashboard-app :is(.procurement-page, .dashboard-overview) .proc-table th {
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+  color: #bacfdf;
+}
+.dashboard-app :is(.procurement-page, .dashboard-overview) .proc-table td {
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 1.5;
+  color: #d7e8f4;
+}
+.dashboard-app :is(.procurement-page, .dashboard-overview) .proc-table td.proc-id-cell {
+  min-width: 184px;
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  font-weight: 400;
+}
+.dashboard-app .proc-record-identity { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.dashboard-app .proc-record-title {
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.36;
+  font-weight: 650;
+  letter-spacing: -.02em;
+  color: #f4faff;
+  overflow-wrap: anywhere;
+}
+.dashboard-app .proc-record-code {
+  display: block;
+  max-width: 100%;
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  font-size: 11.5px;
+  line-height: 1.36;
+  font-weight: 400;
+  letter-spacing: .005em;
+  color: #8da9be;
+  overflow-wrap: anywhere;
+}
+.dashboard-app .proc-record-identity--compact .proc-record-title { font-size: 14px; font-weight: 550; color: #d7e9f7; }
+.dashboard-app .proc-record-identity--compact .proc-record-code { font-size: 11px; }
+.dashboard-app .proc-table .proc-supplier-name { font-size: 14px; font-weight: 550; color: #f0f6fc; }
+.dashboard-app .proc-table .proc-pill { font-family: Inter, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: -.01em; }
+.dashboard-app .proc-table td:has(.proc-record-identity) { height: 79px; padding-block: 12px; vertical-align: middle; }
+.dashboard-app .proc-table .proc-product-cell { min-width: 175px; }
+.dashboard-app .proc-table .proc-open-row { font-size: 13px; font-weight: 600; }
+.dashboard-app .proc-stat-card .proc-stat-copy span { font-family: Inter, 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: -.01em; }
+.dashboard-app .proc-stat-card .proc-stat-copy strong { font-family: 'Space Grotesk', Inter, 'Segoe UI', sans-serif; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+.dashboard-app .proc-stat-card .proc-stat-copy small { font-family: Inter, 'Segoe UI', sans-serif; font-size: 12px; line-height: 1.5; }
+.dashboard-app .proc-drawer-raw-code { font-family: Inter, 'Segoe UI', sans-serif; color: #94afc0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; margin: 7px 0 0; }
+.dashboard-app .proc-detail-drawer .proc-detail-grid b { font-family: Inter, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 550; line-height: 1.5; }
+.dashboard-app .proc-detail-drawer .proc-detail-grid small { font-family: Inter, 'Segoe UI', sans-serif; font-size: 11px; color: #a6bfcd; }
+@media (max-width: 800px) {
+  .dashboard-app .proc-table td:has(.proc-record-identity) { height: 73px; }
+  .dashboard-app .proc-record-title { font-size: 14px; }
+  .dashboard-app .proc-record-code { font-size: 11px; }
+}

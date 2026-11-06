@@ -1,0 +1,159 @@
+/* ProcureMind UI fix — scoped to Agent Chat and Procurement detail drawer.
+   Presentation only. No API contract, IDs, permissions or database data modified. */
+
+/* Two agents remain visible; color responds to hover, keyboard focus, selection. */
+.dashboard-app .chat-context-bar .context-agent-field {
+  border: 0; margin: 0; padding: 0; min-width: min(100%, 345px);
+  flex: 1.7 1 360px; display: block;
+}
+.dashboard-app .chat-context-bar .context-agent-field .context-label {
+  display: block; padding: 0; margin: 0 0 8px;
+  font: 600 12px/1.4 Inter, 'Segoe UI', sans-serif;
+  letter-spacing: .055em; color: #a4bdd0; text-transform: uppercase;
+}
+.dashboard-app .chat-context-bar .context-agent-choices {
+  display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px;
+}
+.dashboard-app .chat-context-bar .context-agent-choice {
+  min-height: 48px; width: 100%; padding: 10px 13px;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  background: #0b1c2c; color: #b5cada; border: 1px solid #304b60;
+  border-radius: 11px; cursor: pointer; text-align: center;
+  font: 600 13px/1.35 Inter, 'Segoe UI', sans-serif;
+  transition: background-color .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+.dashboard-app .chat-context-bar .context-agent-choice svg { flex: none; }
+.dashboard-app .chat-context-bar .context-agent-choice:hover:not(:disabled) {
+  background: #14405a; color: #edfbff; border-color: #38c5e9;
+}
+.dashboard-app .chat-context-bar .context-agent-choice.is-selected {
+  background: #10384e; border-color: #19bddc; color: #64e9f2;
+  box-shadow: inset 0 0 0 1px #18b0cf33;
+}
+.dashboard-app .chat-context-bar .context-agent-choice.is-selected:hover:not(:disabled) {
+  background: #17506a; color: #e9ffff;
+}
+.dashboard-app .chat-context-bar .context-agent-choice:focus-visible,
+.dashboard-app .proc-detail-drawer--polished button:focus-visible {
+  outline: 2px solid #63e9fc; outline-offset: 3px;
+}
+.dashboard-app .chat-context-bar .context-agent-choice:disabled { opacity: .6; cursor: not-allowed; }
+.dashboard-app .chat-context-bar .context-po-field { flex: 1 1 260px; }
+.dashboard-app .chat-context-bar .context-start-btn { flex: 0 0 auto; }
+.dashboard-app .chat-context-bar .context-hint { font-size: 12px; line-height: 1.55; }
+.dashboard-app .chat-context-bar .context-po-field input { font-size: 13px; }
+
+/* Agent responses are text content, not raw HTML; Markdown marks become actual typography. */
+.dashboard-app .chat-message-assistant .chat-richtext {
+  font: 400 15px/1.76 Inter,'Segoe UI',sans-serif;
+  color: #e4f0fa; overflow-wrap: anywhere;
+}
+.dashboard-app .chat-richtext p { margin: 0 0 12px; }
+.dashboard-app .chat-richtext p:last-child { margin-bottom: 0; }
+.dashboard-app .chat-richtext strong { font-weight: 700; color: #f5fbff; }
+.dashboard-app .chat-richtext h3 { font: 650 17px/1.4 'Space Grotesk',Inter,sans-serif; margin: 18px 0 10px; }
+.dashboard-app .chat-richtext ol,.dashboard-app .chat-richtext ul { padding-left: 26px; margin: 10px 0 17px; }
+.dashboard-app .chat-richtext li { padding-left: 5px; margin: 8px 0; }
+.dashboard-app .chat-richtext li::marker { color: #5bdae7; font-weight: 700; }
+.dashboard-app .chat-richtext code { padding: 1px 5px; border-radius: 5px; color: #b4edf5; background: #142e40; font-size: .92em; }
+
+/* Verified results: readable KPI grid; lengthy arrays and explanatory text sit below. */
+.dashboard-app .chat-verified-card { padding: 21px; }
+.dashboard-app .chat-verified-card .verified-grid {
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 11px;
+}
+.dashboard-app .chat-verified-card .verified-item {
+  padding: 15px 14px; min-width: 0;
+  background: linear-gradient(140deg,#0c2d2d,#0b2529);
+}
+.dashboard-app .chat-verified-card .verified-item dt {
+  font: 600 11px/1.45 Inter,sans-serif; text-transform: uppercase;
+  color: #9fcac6; letter-spacing: .055em;
+}
+.dashboard-app .chat-verified-card .verified-item dd {
+  font: 600 15px/1.5 Inter,sans-serif;
+  color: #f1fbf9; margin: 7px 0 0; overflow-wrap: anywhere;
+}
+.dashboard-app .verified-details { display: grid; gap: 12px; margin-top: 17px; }
+.dashboard-app .verified-detail-panel {
+  border: 1px solid #254858; background: #0a202d;
+  border-radius: 12px; padding: 16px 18px;
+  min-width: 0; overflow-wrap: anywhere;
+  font: 400 14px/1.6 Inter,sans-serif;
+}
+.dashboard-app .verified-detail-panel h4 {
+  margin: 0 0 10px; color: #70dce8;
+  font: 650 14px/1.4 Inter,sans-serif;
+}
+.dashboard-app .verified-detail-list { list-style: decimal; margin: 0; padding-left: 21px; }
+.dashboard-app .verified-detail-list>li { margin: 12px 0; padding-left: 4px; }
+.dashboard-app .verified-detail-list>li:last-child { margin-bottom: 0; }
+.dashboard-app .verified-detail-object { display: grid; gap: 8px; }
+.dashboard-app .verified-detail-row { display: grid; grid-template-columns: minmax(130px,.8fr) minmax(0,1.2fr); gap: 12px; }
+.dashboard-app .verified-detail-row+ .verified-detail-row { border-top: 1px solid #254055; padding-top: 8px; }
+.dashboard-app .verified-detail-row span { color: #a1bdc8; }
+.dashboard-app .verified-detail-row strong { font-weight: 550; color: #e9f5fc; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+/* Procurement detail: use clean semantic label/value cards instead of the raw API key dump. */
+.dashboard-app .proc-detail-drawer--polished {
+  width: min(560px,100vw); padding: 27px;
+  color: #e7f3fb; font-family: Inter,'Segoe UI',sans-serif;
+  background: linear-gradient(160deg,#0c2133,#0b1828 55%,#091521);
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-header {
+  align-items: flex-start; padding-bottom: 19px;
+  margin-bottom: 15px; border-bottom: 1px solid #29445a;
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-heading { min-width: 0; }
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: 700 11px/1.45 Inter,sans-serif; color: #4cd8e8;
+  letter-spacing: .085em; text-transform: uppercase;
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-header h2 {
+  font: 700 25px/1.2 'Space Grotesk',Inter,sans-serif;
+  margin: 11px 0 6px; letter-spacing: -.035em; color: #f3faff;
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-raw-code { font-size: 12px; color: #9ab4c7; margin: 0; }
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-header button { flex: none; width: 38px; height: 38px; }
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-section { margin: 18px 0 23px; }
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-section h3 {
+  margin: 0 0 11px; font: 650 15px/1.4 'Space Grotesk',Inter,sans-serif;
+  color: #d8effb; letter-spacing: -.015em;
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-fields {
+  display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin: 0;
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-field {
+  padding: 14px; min-width: 0; background: #0c2a3c;
+  border: 1px solid #21445b; border-radius: 11px;
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-field dt {
+  font: 600 11px/1.45 Inter,sans-serif; color: #9bb8cd;
+  margin: 0 0 7px; text-transform: none; letter-spacing: 0;
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-field dd {
+  font: 600 14px/1.5 Inter,sans-serif; color: #f1f9ff;
+  margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-field .proc-value-empty {
+  font-weight: 400; font-style: italic; color: #8eacbe;
+}
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-actions { margin: 22px 0 8px; }
+.dashboard-app .proc-detail-drawer--polished .proc-drawer-actions button { font-size: 14px; min-height: 48px; }
+@media (max-width: 1100px) {
+  .dashboard-app .chat-context-bar .context-agent-field { flex-basis: 100%; }
+}
+@media (max-width: 700px) {
+  .dashboard-app .chat-verified-card .verified-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .dashboard-app .chat-context-bar .context-agent-choices { grid-template-columns: 1fr 1fr; }
+  .dashboard-app .chat-context-bar .context-agent-choice { font-size: 12px; }
+  .dashboard-app .verified-detail-row { grid-template-columns: 1fr; gap: 2px; }
+  .dashboard-app .proc-detail-drawer--polished { padding: 18px; }
+}
+@media (max-width: 400px) {
+  .dashboard-app .chat-context-bar .context-agent-choices,
+  .dashboard-app .chat-verified-card .verified-grid,
+  .dashboard-app .proc-detail-drawer--polished .proc-drawer-fields { grid-template-columns: 1fr; }
+}

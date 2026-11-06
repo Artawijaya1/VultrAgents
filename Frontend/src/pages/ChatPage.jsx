@@ -14,6 +14,7 @@ import {
 import { ApiError } from '../services/api';
 import { recordAuditEvent } from '../services/auditLogService';
 import './chat.css';
+import '../styles/ui-readability-fix.css';
 
 export default function ChatPage() {
   const navigate = useNavigate();

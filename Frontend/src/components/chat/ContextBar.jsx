@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Handshake, ShieldAlert } from 'lucide-react';
 
 const REFERENCE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/;
+const AGENTS = [
+  { id: 'negotiation', name: 'Negotiation Copilot', Icon: Handshake },
+  { id: 'fraud', name: 'Fraud Detection', Icon: ShieldAlert },
+];
 
 export default function ContextBar({ task, referenceId, onStart, disabled, hasMessages }) {
   const [localTask, setLocalTask] = useState(task || 'negotiation');
@@ -29,38 +33,46 @@ export default function ContextBar({ task, referenceId, onStart, disabled, hasMe
   return (
     <div className="chat-context-bar">
       <div className="context-bar-fields">
-        <label className="context-field">
-          <span className="context-label">Task</span>
-          <div className="context-select-wrap">
-            {localTask === 'negotiation' ? <Handshake size={15} /> : <ShieldAlert size={15} />}
-            <select value={localTask} onChange={e => { setLocalTask(e.target.value); setConfirming(false); }} disabled={disabled}>
-              <option value="negotiation">Negotiation Copilot</option>
-              <option value="fraud">Fraud Detection</option>
-            </select>
+        <fieldset className="context-agent-field" disabled={disabled}>
+          <legend className="context-label">Choose an AI agent</legend>
+          <div className="context-agent-choices" aria-label="Choose an AI agent">
+            {AGENTS.map(({ id, name, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                className={`context-agent-choice${localTask === id ? ' is-selected' : ''}`}
+                aria-pressed={localTask === id}
+                onClick={() => { setLocalTask(id); setConfirming(false); }}
+                disabled={disabled}
+              >
+                <Icon size={19} aria-hidden="true" />
+                <span>{name}</span>
+              </button>
+            ))}
           </div>
-        </label>
-        <label className="context-field">
-          <span className="context-label">Purchase Order</span>
+        </fieldset>
+        <label className="context-field context-po-field">
+          <span className="context-label">Purchase Order ID</span>
           <input
             type="text"
             value={localRef}
             onChange={e => { setLocalRef(e.target.value); setError(''); setConfirming(false); }}
-            placeholder="e.g. PO-12345"
+            placeholder="e.g. AGENT-DEMO-PO-002"
             maxLength={100}
             disabled={disabled}
           />
         </label>
-        <button className="chat-btn chat-btn-primary" onClick={handleStart} disabled={disabled}>
+        <button type="button" className="chat-btn chat-btn-primary context-start-btn" onClick={handleStart} disabled={disabled}>
           {hasMessages ? 'New conversation' : 'Start conversation'}
         </button>
       </div>
-      <p className="context-hint">Use a purchase order stored in Backend and assigned to your account.</p>
-      {error && <p className="context-error">{error}</p>}
+      <p className="context-hint">Select either agent above. Only purchase orders assigned to your account can be used.</p>
+      {error && <p className="context-error" role="alert">{error}</p>}
       {confirming && (
         <div className="context-confirm">
           <span>Starting a new conversation will clear the current messages. Continue?</span>
-          <button className="chat-btn chat-btn-small" onClick={confirmNew}>Yes, start new</button>
-          <button className="chat-btn chat-btn-small chat-btn-quiet" onClick={() => setConfirming(false)}>Cancel</button>
+          <button type="button" className="chat-btn chat-btn-small" onClick={confirmNew}>Yes, start new</button>
+          <button type="button" className="chat-btn chat-btn-small chat-btn-quiet" onClick={() => setConfirming(false)}>Cancel</button>
         </div>
       )}
     </div>
