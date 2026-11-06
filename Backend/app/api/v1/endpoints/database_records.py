@@ -1,5 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timezone
+import logging
+import math
 from typing import Any
 from uuid import uuid4
 
@@ -22,6 +24,7 @@ from app.models.procurement import (
 from app.models.user import User
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _owned_orders(db: Session, user: User):
@@ -163,11 +166,35 @@ def create_negotiation(
     order = db.scalar(select(PurchaseOrder).where(PurchaseOrder.po_id == po_id, PurchaseOrder.owner_user_id == user.id))
     if order is None:
         raise HTTPException(status_code=404, detail="Purchase order not found for this account.")
+    context_payload = payload.get("context")
+    context = dict(context_payload) if isinstance(context_payload, dict) else {}
+    if "target_unit_price" in context:
+        target_unit_price = context["target_unit_price"]
+        if (
+            isinstance(target_unit_price, bool)
+            or not isinstance(target_unit_price, (int, float))
+            or target_unit_price <= 0
+            or (
+                isinstance(target_unit_price, float)
+                and not math.isfinite(target_unit_price)
+            )
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="Target unit price must be a positive finite number.",
+            )
+    context.update({
+        "offered_unit_price": order.offered_unit_price,
+        "quantity": float(order.quantity),
+        "currency": order.currency,
+        "budget_ceiling_unit": order.budget_ceiling_unit,
+        "previous_unit_price": order.previous_unit_price,
+    })
     negotiation = Negotiation(
         negotiation_id=f"NEG-{uuid4().hex}",
         po_id=order.po_id,
         status="draft",
-        context=payload.get("context") if isinstance(payload.get("context"), dict) else {},
+        context=context,
     )
     db.add(negotiation)
     db.add(AuditLog(
@@ -179,6 +206,11 @@ def create_negotiation(
     ))
     db.commit()
     db.refresh(negotiation)
+    logger.info(
+        "Saved negotiation analysis %s for purchase order %s",
+        negotiation.negotiation_id,
+        order.po_id,
+    )
     supplier = db.get(Supplier, order.supplier_id)
     return {
         "negotiation_id": negotiation.negotiation_id,
@@ -365,4 +397,3 @@ def list_audit_logs(
         "summary": row.details.get("summary", row.action) if row.details else row.action,
         "details": row.details or {},
     } for row, email in rows]
-

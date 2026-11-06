@@ -10,6 +10,7 @@ from app.models.procurement import (
     ApprovalRequest,
     ChangeRequest,
     Invoice,
+    Negotiation,
     PurchaseOrder,
     PurchaseOrderFollowUp,
     Supplier,
@@ -88,6 +89,66 @@ def test_internal_procurement_routes_match_agent_provider_contract(
     }
     assert invoice_response.status_code == 200
     assert invoice_response.json()["items"][0]["record_id"] == "INV-ROW-1"
+
+
+def test_negotiation_analysis_persists_target_and_uses_database_order_values(
+    client, test_session_factory
+):
+    _seed_procurement(test_session_factory)
+
+    response = client.post(
+        "/api/v1/negotiations",
+        headers={"Authorization": "Bearer test-token"},
+        json={
+            "po_id": "PO-1",
+            "context": {
+                "target_unit_price": 850,
+                "offered_unit_price": 1,
+                "quantity": 1,
+                "currency": "USD",
+            },
+        },
+    )
+
+    assert response.status_code == 201
+    result = response.json()
+    assert result["context"] == {
+        "target_unit_price": 850,
+        "offered_unit_price": 1000,
+        "quantity": 10.0,
+        "currency": "IDR",
+        "budget_ceiling_unit": 1200,
+        "previous_unit_price": 900,
+    }
+
+    listed = client.get(
+        "/api/v1/negotiations",
+        headers={"Authorization": "Bearer test-token"},
+    )
+    assert listed.status_code == 200
+    assert listed.json()[0]["negotiation_id"] == result["negotiation_id"]
+    assert listed.json()[0]["context"] == result["context"]
+
+    with test_session_factory() as db:
+        saved = db.get(Negotiation, result["negotiation_id"])
+        assert saved is not None
+        assert saved.context == result["context"]
+
+
+def test_negotiation_analysis_rejects_nonpositive_target_price(
+    client, test_session_factory
+):
+    _seed_procurement(test_session_factory)
+
+    response = client.post(
+        "/api/v1/negotiations",
+        headers={"Authorization": "Bearer test-token"},
+        json={"po_id": "PO-1", "context": {"target_unit_price": 0}},
+    )
+
+    assert response.status_code == 422
+    with test_session_factory() as db:
+        assert db.scalar(select(Negotiation)) is None
 
 
 def test_agent_run_persists_approval_and_audit(client, test_session_factory, monkeypatch):
