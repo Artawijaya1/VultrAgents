@@ -4,6 +4,7 @@ import VerifiedResultCard from './VerifiedResultCard';
 import RiskFindings from './RiskFindings';
 import ToolTrace from './ToolTrace';
 import ApprovalGate from './ApprovalGate';
+import ChatMarkdown from './ChatMarkdown';
 
 const STATUS_LABELS = {
   draft: 'AI draft',
@@ -44,7 +45,7 @@ function AssistantMessage({ msg, task, approvalPendingId, onApprove, onReject })
           <Info size={13} /> AI draft — not verified output
         </div>
       )}
-      {msg.content && <p className="chat-answer-text">{msg.content}</p>}
+      {msg.content && <ChatMarkdown content={msg.content} />}
       {msg.verifiedResult && <VerifiedResultCard data={msg.verifiedResult} task={task} />}
       {msg.precheck && msg.precheck.findings && msg.precheck.findings.length > 0 && (
         <RiskFindings precheck={msg.precheck} />
@@ -85,7 +86,13 @@ export default function MessageList({ messages, loading, task, approvalPendingId
     <div className="chat-message-list" role="log" aria-live="polite" aria-label="Chat messages">
       {messages.length === 0 && !loading && (
         <div className="chat-empty">
-          <p>Choose a task and Purchase Order above, then ask a question to begin.</p>
+          <ShieldCheck size={34} aria-hidden="true" />
+          <h2>Start with an authorized purchase order</h2>
+          <p>Choose Negotiation Copilot or Fraud Detection above, enter a PO assigned to your account, and select <b>Start conversation</b>. Your results will be grounded in Backend procurement data.</p>
+          <div className="chat-empty-prompts" aria-label="Example questions">
+            <span>Analyze this purchase order and provide three negotiation options.</span>
+            <span>Identify any invoice anomalies that require human review.</span>
+          </div>
         </div>
       )}
       {messages.map(msg =>
